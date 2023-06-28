@@ -1,0 +1,17 @@
+$TTL 2d
+
+$ORIGIN myhomerouter21.asuscomm.com.
+
+@             IN     SOA    ns.myhomerouter21.asuscomm.com. info.myhomerouter21.asuscomm.com. (
+                            20221219100     ; serial
+                            12h            ; refresh
+                            15m            ; retry
+                            3w             ; expire
+                            2h )           ; minimum TTL
+
+              IN     NS     ns.myhomerouter21.asuscomm.com.
+
+ns            IN     A      192.168.1.100
+
+portrain    IN     A      192.168.1.100
+nginxproxyadmin  IN   A   192.168.1.100
