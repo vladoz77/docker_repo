@@ -10,7 +10,7 @@ services:
     restart: unless-stopped
     command: "--config.file /etc/prometheus/prometheus.yaml"
     volumes:
-      - /home/vlad/docker/prometheus+grafana/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - prometheus-data:/prometheus
     ports:
       - 9090:9090
