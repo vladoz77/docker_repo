@@ -10,6 +10,11 @@ services:
     ports:
       - 8000:8000
       - 9443:9443
+    networks:
+      - ngix-manager_default
 volumes:
   portainer_data:
-  
+
+networks:
+  ngix-manager_default:
+    external: true

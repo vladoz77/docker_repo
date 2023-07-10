@@ -2,19 +2,26 @@ version: '3.6'
 services:
   gitlab:
     image: gitlab/gitlab-ce:15.11.11-ce.0
-    restart: umless-stopped
+    restart: unless-stopped
     hostname: gitlab.home.local
+    container_name: gitlab
     environment:
        GITLAB_OMNIBUS_CONFIG: |
          external_url 'http://gitlab.home.local' 
     ports:
-      - '80:80'
-      - '443:443'
+      - '8088:80'
+      - '8443:443'
       - '22:22'
     volumes:
       - '/opt/gitlab/config:/etc/gitlab'
       - '/opt/gitlab/logs:/var/log/gitlab'
       - '/opt/gitlab/data:/var/opt/gitlab'
+    networks:
+      - ngix-manager_default
+
+networks:
+  ngix-manager_default:
+    external: true
 
 
 
