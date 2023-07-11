@@ -1,7 +1,7 @@
 version: '3'
 services:
   portainer:
-    image: portainer/portainer-ce:latest
+    image: portainer/portainer-ce:2.18.4
     container_name: portainer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -10,6 +10,11 @@ services:
     ports:
       - 8000:8000
       - 9443:9443
+    networks:
+      - ngix-manager_default
 volumes:
   portainer_data:
-  
+
+networks:
+  ngix-manager_default:
+    external: true

@@ -1,0 +1,39 @@
+version: '3.6'
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:15.11.11-ce.0
+    restart: unless-stopped
+    hostname: gitlab.home.local
+    container_name: gitlab
+    environment:
+       GITLAB_OMNIBUS_CONFIG: |
+         external_url 'http://gitlab.home.local' 
+    ports:
+      - '8088:80'
+      - '8443:443'
+      - '22:22'
+    volumes:
+      - '/opt/gitlab/config:/etc/gitlab'
+      - '/opt/gitlab/logs:/var/log/gitlab'
+      - '/opt/gitlab/data:/var/opt/gitlab'
+    networks:
+      - ngix-manager_default
+      - gitlab_net
+
+  gitlab-runner:
+   container_name: gitlab-runner
+   image: gitlab/gitlab-runner:latest
+   restart: always
+   volumes:
+     - '/opt/gitlab-runner/config:/etc/gitlab-runner'
+     - '/var/run/docker.sock:/var/run/docker.sock:rw'
+   networks:
+     - gitlab_net
+
+networks:
+  ngix-manager_default:
+    external: true
+  gitlab_net:
+
+
+
