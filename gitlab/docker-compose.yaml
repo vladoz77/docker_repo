@@ -18,10 +18,23 @@ services:
       - '/opt/gitlab/data:/var/opt/gitlab'
     networks:
       - ngix-manager_default
+      - gitlab_net
+
+  gitlab-runner:
+   container_name: gitlab-runner
+   image: gitlab/gitlab-runner:latest
+   restart: always
+   volumes:
+     - '/opt/gitlab-runner/data:/home/gitlab_ci_multi_runner/data'
+     - '/opt/gitlab-runner/config:/etc/gitlab-runner'
+     - '/var/run/docker.sock:/var/run/docker.sock:rw'
+   networks:
+     - gitlab_net
 
 networks:
   ngix-manager_default:
     external: true
+  gitlab_net:
 
 
 
