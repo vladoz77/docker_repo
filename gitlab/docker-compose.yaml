@@ -25,7 +25,6 @@ services:
    image: gitlab/gitlab-runner:latest
    restart: always
    volumes:
-     - '/opt/gitlab-runner/data:/home/gitlab_ci_multi_runner/data'
      - '/opt/gitlab-runner/config:/etc/gitlab-runner'
      - '/var/run/docker.sock:/var/run/docker.sock:rw'
    networks:
