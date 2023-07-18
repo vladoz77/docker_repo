@@ -3,6 +3,11 @@ volumes:
   prometheus-data:
   grafana-data:
 
+networks:
+  ngix-manager_default:
+    external: true
+  prometheus_net:
+
 services:
   prometheus:
     image: prom/prometheus:v2.45.0
@@ -17,6 +22,8 @@ services:
     depends_on:
       # - node-exporter
       - cadviser
+    networks:
+      - prometheus_net
   
   node-exporter:
     image: prom/node-exporter:v1.6.0
@@ -30,9 +37,11 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      # - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     ports:
       - 9100
+    networks:
+      - prometheus_net
 
   
   cadviser:
@@ -51,6 +60,8 @@ services:
     ports:
       - 8080:8080
     restart: unless-stopped
+    networks:
+      - prometheus_net
     
   grafana:
     image: grafana/grafana:10.0.1
@@ -62,3 +73,9 @@ services:
     restart: unless-stopped
     volumes:
       - grafana-data:/var/lib/grafana:rw
+    networks:
+      - ngix-manager_default
+      - prometheus_net
+
+
+
