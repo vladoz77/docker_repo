@@ -3,6 +3,7 @@ services:
   app:
     image: 'jc21/nginx-proxy-manager:2.10.3'
     restart: unless-stopped
+    container_name: nginx-proxy-manager
     ports:
       # These ports are in format <host-port>:<container-port>
       - '80:80' # Public HTTP Port
