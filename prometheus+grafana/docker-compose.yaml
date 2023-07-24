@@ -14,8 +14,8 @@ services:
     container_name: prometheus
     restart: unless-stopped
     command: 
-      - "--config.file /etc/prometheus/prometheus.yaml"
-      - "--web.enable-lifecycle"
+      - --config.file=/etc/prometheus/prometheus.yaml
+      - --web.enable-lifecycle
     environment:
       - TZ=value
     volumes:
