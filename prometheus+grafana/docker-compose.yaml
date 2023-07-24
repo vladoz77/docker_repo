@@ -13,7 +13,11 @@ services:
     image: prom/prometheus:v2.45.0
     container_name: prometheus
     restart: unless-stopped
-    command: "--config.file /etc/prometheus/prometheus.yaml"
+    command: 
+      - "--config.file /etc/prometheus/prometheus.yaml"
+      - "--web.enable-lifecycle"
+    environment:
+      - TZ=value
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
       - prometheus-data:/prometheus
