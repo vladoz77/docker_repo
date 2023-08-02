@@ -20,6 +20,7 @@ services:
       - TZ=value
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ./rules:/etc/prometheus/rules
       - prometheus-data:/prometheus
     ports:
       - 9090:9090
