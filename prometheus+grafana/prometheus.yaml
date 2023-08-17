@@ -7,6 +7,7 @@ global:
   external_labels:
     monitor: 'codelab-monitor'
 
+
 rule_files:
 - "rules/*.yaml"
 
@@ -33,4 +34,15 @@ scrape_configs:
 - job_name: windows_export
   static_configs:
   - targets: ['192.168.59.173:9182']
+
+alerting:
+  alertmanagers:
+  - timeout: "15s"
+    api_version: v2
+    path_prefix: /
+    scheme: http
+    follow_redirects: true
+    static_configs:
+    - targets:
+      - 'alertmanager:9093'
 
