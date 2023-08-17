@@ -1,0 +1,10 @@
+groups:
+- name: alert rules
+  rules:
+  - alert: Nodeexporter down
+    expr: up{job="node_export"} == 0
+    for: 5m
+    labels:
+      severity: critical
+
+
