@@ -4,7 +4,7 @@ route:
 receivers:
 - name: admin
   email_configs:
-  - to: 'vladozz23@gmail.com'
+  - to: 'vladoz77@yandex.ru'
     from: 'vladozz23@gmail.com'
     smarthost: 'smtp.gmail.com:465'
     auth_username: vladozz23@gmail.com
