@@ -84,7 +84,7 @@ services:
       - grafana-data:/var/lib/grafana:rw
     networks:
       ngix-manager_default:
-        ipv4_address: 172.21.0.1
+        ipv4_address: 172.21.0.10
       prometheus_net:
 
   alertmanager:
@@ -95,7 +95,7 @@ services:
       - --config.file=/etc/alertmanager/alertmanager.yaml
     volumes:
       - ./alertmanager.yaml:/etc/alertmanager/alertmanager.yaml:ro
-      - alertmanager-data:/alertmanager
+      - alertmanager-data:/data
     ports:
       - 9093:9093
     networks:

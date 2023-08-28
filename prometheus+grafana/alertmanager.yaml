@@ -4,9 +4,12 @@ route:
 receivers:
 - name: admin
   email_configs:
-  - to: 'vladoz77@yandex.ru.com'
+  - to: 'vladozz23@gmail.com'
     from: 'vladozz23@gmail.com'
-    smarthost: smtp.gmail.com:587
+    smarthost: 'smtp.gmail.com:465'
     auth_username: vladozz23@gmail.com
     auth_identity: vladozz23@gmail.com
-    auth_password: 'Vl@d0z77VK'
+    auth_password: pisxijhlxexflfhu
+    send_resolved: true
+    require_tls: false
+
