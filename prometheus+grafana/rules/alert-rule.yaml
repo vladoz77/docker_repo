@@ -6,5 +6,7 @@ groups:
     for: 5m
     labels:
       severity: critical
+    annotations:
+      desciption: nodeexporter is down on {{ $labels.instance }}
 
 

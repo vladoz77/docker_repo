@@ -6,6 +6,7 @@ global:
   # external systems (federation, remote storage, Alertmanager).
 
 
+
 rule_files:
 - "rules/*.yaml"
 
@@ -29,9 +30,6 @@ scrape_configs:
   static_configs:
   - targets: ['cadviser:8080']
 
-- job_name: windows_export
-  static_configs:
-  - targets: ['192.168.59.173:9182']
 
 alerting:
   alertmanagers:

@@ -1,15 +1,24 @@
+global:
+  smtp_smarthost: smtp.gmail.com:465
+  smtp_auth_username: vladozz23@gmail.com
+  smtp_auth_identity: vladozz23@gmail.com
+  smtp_auth_password: pisxijhlxexflfhu
+  smtp_require_tls: false
 route:
-  receiver: admin
+  receiver: mail
+  group_wait: 10s
+  group_by: ['alertname']
+  routes:
+    - receiver: mail
+      group_wait: 10s
+      matchers:
+        - severity=~critical|warning
 
 receivers:
-- name: admin
+- name: mail
   email_configs:
   - to: 'vladoz77@yandex.ru'
     from: 'vladozz23@gmail.com'
-    smarthost: 'smtp.gmail.com:465'
-    auth_username: vladozz23@gmail.com
-    auth_identity: vladozz23@gmail.com
-    auth_password: pisxijhlxexflfhu
     send_resolved: true
-    require_tls: false
+    
 
