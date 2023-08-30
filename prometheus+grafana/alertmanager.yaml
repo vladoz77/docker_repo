@@ -1,24 +1,77 @@
 global:
+  smtp_from: 'vladozz23@gmail.com'
   smtp_smarthost: smtp.gmail.com:465
   smtp_auth_username: vladozz23@gmail.com
   smtp_auth_identity: vladozz23@gmail.com
   smtp_auth_password: pisxijhlxexflfhu
   smtp_require_tls: false
 route:
-  receiver: mail
+  receiver: admin
   group_wait: 10s
   group_by: ['alertname']
   routes:
-    - receiver: mail
+    # linux team
+    - receiver: server-admin
       group_wait: 10s
       matchers:
-        - severity=~critical|warning
+        - app_type=linux
+      routes:
+      # for critical alert
+      - receiver: linux-team-admin
+        matchers: 
+         - severity=critical
+      # for warning alert
+      - receiver: linux-team-tp
+        matchers: 
+         - severity=warning
+
+    # Docker team
+    - receiver: server-admin    
+      group_wait: 10s
+      matchers:
+        - app_type=docker
+      routes:
+        - receiver: docker-team-admin
+          matchers:
+            - severity=critical
+        - receiver: docker-team-tp
+          matchers:
+            - severity=warning
+    
 
 receivers:
-- name: mail
+- name: admin
   email_configs:
   - to: 'vladoz77@yandex.ru'
-    from: 'vladozz23@gmail.com'
+    send_resolved: true
+
+- name: server-admin
+  email_configs:
+  - to: 'vladoz77@yandex.ru'
+    send_resolved: true
+
+# for critical alert in linux
+- name: linux-team-admin
+  email_configs:
+  - to: 'vladozz23@gmail.com'
+    send_resolved: true
+
+# for warning alert in linux
+- name: linux-team-tp
+  email_configs:
+  - to: 'vladozz23@gmail.com'
+    send_resolved: true
+
+# docker team admin
+- name: docker-team-admin
+  email_configs:
+  - to: 'vladozz23@gmail.com'
+    send_resolved: true
+
+# docker team tp
+- name: docker-team-tp
+  email_configs:
+  - to: 'vladozz23@gmail.com'
     send_resolved: true
     
 

@@ -1,0 +1,36 @@
+groups:
+  - name: docker alerts
+    rules:
+      - alert: ContainerHighCpuUtilization
+        expr: (sum(rate(container_cpu_usage_seconds_total{name!=""}[3m])) BY (instance, name) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+          app_type: docker
+        annotations:
+          summary: Container High CPU utilization on {{ $labels.instance }})
+          description: "Container CPU utilization is above 80%"
+        
+      - alert: ContainerHighMemoryUsage
+        expr: (sum(container_memory_working_set_bytes{name!=""}) BY (instance, name) / sum(container_spec_memory_limit_bytes > 0) BY (instance, name) * 100) > 80
+        for: 2m
+        labels:
+          severity: warning
+          app_type: docker
+        annotations:
+          summary: Container High Memory usage on{{ $labels.instance }})
+          description: "Container Memory usage is above 80%"
+        
+
+        # This rule can be very noisy in dynamic infra with legitimate container start/stop/deployment.
+      - alert: ContainerAbsent
+        expr: absent(container_last_seen)
+        for: 5m
+        labels:
+          severity: critical
+          app_type: docker
+        annotations:
+          summary: Container {{ $labels.instance }})
+          description: "A container is absent for 5 min"
+
+

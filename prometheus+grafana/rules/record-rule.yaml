@@ -1,8 +1,11 @@
 groups:
-- name: rule
+- name: linux rules
   rules:
   - record: job:node_cpu_seconds_total:avg_idle
     expr: avg without(cpu)(rate(node_cpu_seconds_total{mode="idle"}[5m]))
 
   - record: job:node_cpu_seconds_total:avg_not_idle
     expr: avg without(cpu)(rate(node_cpu_seconds_total{mode!="idle"}[5m]))
+
+  - record: job:node_memory:available
+    expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100
