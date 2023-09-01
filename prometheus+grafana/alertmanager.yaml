@@ -52,15 +52,19 @@ receivers:
 
 # for critical alert in linux
 - name: linux-team-admin
-  email_configs:
-  - to: 'vladozz23@gmail.com'
-    send_resolved: true
+  telegram_configs:
+  - bot_token: 6542927122:AAG3qDOcXNpKC46hg1pQCf4e0WG50InWg1w
+    api_url: https://api.telegram.org
+    chat_id: 310164408
+    parse_mode: ''
 
 # for warning alert in linux
 - name: linux-team-tp
-  email_configs:
-  - to: 'vladozz23@gmail.com'
-    send_resolved: true
+  telegram_configs:
+  - bot_token: 5871733943:AAG80rp0SDHGA3D24oVs7JTFa89siIcbNd0
+    api_url: https://api.telegram.org
+    chat_id: 310164408
+    parse_mode: ''
 
 # docker team admin
 - name: docker-team-admin
