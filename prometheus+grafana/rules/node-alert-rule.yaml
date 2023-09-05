@@ -13,7 +13,7 @@ groups:
       summary: node is down
 
   - alert: NodeMemoryUsageAbove60%
-    expr: 60 < (100 - job:node_memory_Mem_bytes:available) < 75
+    expr: (100 - job:node_memory:available) > 60
     for: 2m
     labels:
         severity: warning
@@ -24,7 +24,7 @@ groups:
         description: "Node memory for instance {{ $labels.instance }} has reached {{ $value }}%"
 
   - alert: NodeMemoryUsageAbove75%
-    expr: (100 - job:node_memory_Mem_bytes:available) >= 75
+    expr: (100 - job:node_memory:available) >= 75
     for: 2m
     labels:
         severity: critical

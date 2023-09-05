@@ -8,13 +8,17 @@ global:
 route:
   receiver: admin
   group_wait: 10s
-  group_by: ['alertname']
+  group_by: 
+    - instance
   routes:
     # linux team
     - receiver: server-admin
       group_wait: 10s
       matchers:
         - app_type=linux
+      group_by:
+        - category
+        - severity
       routes:
       # for critical alert
       - receiver: linux-team-admin
@@ -37,6 +41,14 @@ route:
         - receiver: docker-team-tp
           matchers:
             - severity=warning
+
+inhibit_rules:
+  - target_match: 
+      severity: warning
+    source_match:
+      severity: critical
+    equal:
+      - category
     
 
 receivers:
