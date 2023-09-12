@@ -7,7 +7,8 @@ volumes:
 networks:
   ngix-manager_default:
     external: true
-  prometheus_net:
+  prometheus:
+  loki:
 
 services:
   prometheus:
@@ -30,7 +31,7 @@ services:
       # - node-exporter
       - cadviser
     networks:
-       prometheus_net:
+       prometheus:
        ngix-manager_default:
          ipv4_address: 172.21.0.5
   
@@ -50,7 +51,7 @@ services:
     ports:
       - 9100:9100
     networks:
-      prometheus_net:
+      prometheus:
 
   
   cadviser:
@@ -70,7 +71,7 @@ services:
       - 8080:8080
     restart: unless-stopped
     networks:
-      prometheus_net:
+      prometheus:
     
   grafana:
     image: grafana/grafana:10.0.1
@@ -85,7 +86,8 @@ services:
     networks:
       ngix-manager_default:
         ipv4_address: 172.21.0.10
-      prometheus_net:
+      prometheus:
+      loki:
 
   alertmanager:
     image: prom/alertmanager:v0.25.0
@@ -99,9 +101,11 @@ services:
     ports:
       - 9093:9093
     networks:
+      loki:
       ngix-manager_default:
         ipv4_address: 172.21.0.6
-      prometheus_net:
+      prometheus:
+      
 
     
 
