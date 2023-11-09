@@ -1,0 +1,28 @@
+version: "3.0"
+services:
+  jenkins:
+    image: jenkins/jenkins:latest-jdk17
+    container_name: jenkins
+    privileged: true
+    restart: unless-stopped
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    volumes:
+      - jenkins-docker-certs:/certs/client
+      - jenkins-data:/var/jenkins_home
+    ports:
+      - 2376:2376
+      - 8080:8080
+      - 50000:50000
+    networks: 
+      jenkins-network:
+      
+
+volumes:
+ jenkins-docker-certs:
+ jenkins-data:
+networks:
+  jenkins-network:
+
+      
+  
