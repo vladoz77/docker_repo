@@ -27,9 +27,6 @@ services:
       - prometheus-data:/prometheus
     ports:
       - 9090:9090
-    depends_on:
-      # - node-exporter
-      - cadviser
     networks:
        prometheus:
        ngix-manager_default:
@@ -54,9 +51,9 @@ services:
       prometheus:
 
   
-  cadviser:
+  cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.2
-    container_name: cadviser
+    container_name: cadvisor
     privileged: true
     volumes:
       - /:/rootfs:ro
@@ -68,7 +65,7 @@ services:
     devices:
       - /dev/kmsg
     ports:
-      - 8080:8080
+      - 8081:8080
     restart: unless-stopped
     networks:
       prometheus:
