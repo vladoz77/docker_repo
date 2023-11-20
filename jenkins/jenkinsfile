@@ -16,7 +16,7 @@ pipeline{
     stage("checkout from scm"){
         steps{
           git branch: 'main', url: 'https://github.com/vladoz77/cicd-test-project'
-        }https://github.com/vladoz77/cicd-test-project
+        }
     }
   }
 }
