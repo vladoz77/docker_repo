@@ -16,6 +16,8 @@ services:
       - 50000:50000
     networks: 
       jenkins-network:
+      ngix-manager_default:
+        ipv4_address: 172.21.0.11
       
 
 volumes:
@@ -23,6 +25,9 @@ volumes:
  jenkins-data:
 networks:
   jenkins-network:
+  ngix-manager_default:
+    external: true
+      
 
       
   

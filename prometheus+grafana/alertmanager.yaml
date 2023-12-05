@@ -11,29 +11,32 @@ route:
   group_by: 
     - instance
   routes:
-    # linux team
-    - receiver: server-admin
+    - receiver: server-admin # linux team
       group_wait: 10s
       matchers:
         - app_type=linux
       group_by:
+        - instance
         - category
         - severity
       routes:
-      # for critical alert
-      - receiver: linux-team-admin
-        matchers: 
+      - matchers:  # for critical alert
          - severity=critical
-      # for warning alert
-      - receiver: linux-team-tp
-        matchers: 
+        receiver: linux-team-admin
+      - matchers: # for warning alert
          - severity=warning
+        receiver: linux-team-tp
+        
 
     # Docker team
     - receiver: server-admin    
       group_wait: 10s
       matchers:
         - app_type=docker
+      group_by:
+        - instance
+        - category
+        - severity
       routes:
         - receiver: docker-team-admin
           matchers:
