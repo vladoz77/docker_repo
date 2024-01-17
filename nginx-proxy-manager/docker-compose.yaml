@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   app:
-    image: 'jc21/nginx-proxy-manager:2.10.3'
+    image: 'jc21/nginx-proxy-manager:2.10.4'
     restart: unless-stopped
     container_name: nginx-proxy-manager
     ports:
@@ -11,7 +11,7 @@ services:
     volumes:
       - data_nginx:/data
     networks:
-       ngix_default:
+       default_net:
       
 
 volumes:
@@ -19,10 +19,7 @@ volumes:
   letsencrypt_nginx:
 
 networks:
-  ngix_default:
-    name: nginx_default
-    ipam:
-      config:
-        - subnet: "172.50.0.0/24"
-          gateway: "172.50.0.1"
+  default_net:
+    external: true
+      
 
