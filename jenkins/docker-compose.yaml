@@ -17,7 +17,15 @@ services:
     networks: 
       jenkins-network:
       default_net:
-      
+  mail:
+    image: mailhog/mailhog:v1.0.1
+    container_name: mailhog
+    networks:
+      jenkins-network:
+    ports:
+        - 1025:1025
+        - 8025:8025
+
 
 volumes:
  jenkins-docker-certs:
