@@ -19,6 +19,9 @@ services:
       POSTGRES_DB: ${PG_DB:-authentik}
     env_file:
       - .env
+    networks:
+      - authentik
+  
   redis:
     image: docker.io/library/redis:alpine
     command: --save 60 1 --loglevel warning
@@ -31,6 +34,9 @@ services:
       timeout: 3s
     volumes:
       - redis:/data
+    networks:
+      - authentik
+
   server:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2024.2.1}
     restart: unless-stopped
@@ -52,6 +58,9 @@ services:
     depends_on:
       - postgresql
       - redis
+    networks:
+      - nginx_net
+      - authentik
   worker:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2024.2.1}
     restart: unless-stopped
@@ -79,19 +88,28 @@ services:
     depends_on:
       - postgresql
       - redis
+    networks:
+      - authentik
 
-  proxy-server:
-    image: nginx:1.25.4-alpine
-    restart: unless-stopped
-    volumes:
-      - ./nginx/proxy.conf:/etc/nginx/conf.d/proxy.conf
-      - ./nginx/certs:/etc/nginx/certs
-    ports:
-      - 80:80
-      - 443:443
+  # proxy-server:
+  #   image: nginx:1.25.4-alpine
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./nginx/proxy.conf:/etc/nginx/conf.d/proxy.conf
+  #     - ./nginx/certs:/etc/nginx/certs
+  #   ports:
+  #     - 8081:80
+  #     - 4443:443
+  #   networks:
+  #     - authentik
 
 volumes:
   database:
     driver: local
   redis:
     driver: local
+
+networks:
+  nginx_net:
+    external: true
+  authentik:
