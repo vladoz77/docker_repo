@@ -80,8 +80,8 @@ services:
       - postgresql
       - redis
 
-  proxy:
-    image: nginx:latest
+  proxy-server:
+    image: nginx:1.25.4-alpine
     restart: unless-stopped
     volumes:
       - ./nginx/proxy.conf:/etc/nginx/conf.d/proxy.conf
