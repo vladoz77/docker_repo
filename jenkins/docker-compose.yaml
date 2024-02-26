@@ -16,7 +16,7 @@ services:
       - 50000:50000
     networks: 
       jenkins-network:
-      default_net:
+      nginx_net:
   mail:
     image: mailhog/mailhog:v1.0.1
     container_name: mailhog
@@ -33,7 +33,7 @@ volumes:
 
 networks:
   jenkins-network:
-  default_net:
+  nginx_net:
     external: true
       
       

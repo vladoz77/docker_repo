@@ -11,7 +11,7 @@ services:
     volumes:
       - data_nginx:/data
     networks:
-       default_net:
+       nginx_net:
       
 
 volumes:
@@ -19,7 +19,7 @@ volumes:
   letsencrypt_nginx:
 
 networks:
-  default_net:
+  nginx_net:
     external: true
       
 
