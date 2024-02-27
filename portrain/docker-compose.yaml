@@ -9,12 +9,12 @@ services:
     restart: unless-stopped
     ports:
       - 8000:8000
-      - 9443:9443
+      - 9444:9443
     networks:
-      - ngix-manager_default
+      - nginx_net
 volumes:
   portainer_data:
 
 networks:
-  ngix-manager_default:
+  nginx_net:
     external: true
