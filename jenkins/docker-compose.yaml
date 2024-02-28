@@ -8,8 +8,8 @@ services:
     environment:
       - DOCKER_TLS_CERTDIR=/certs
     volumes:
-      - jenkins-docker-certs:/certs/client
-      - jenkins-data:/var/jenkins_home
+      - jenkins-docker-certs:/certs/client:rw
+      - jenkins-data:/var/jenkins_home:rw
     ports:
       - 2376:2376
       - 8080:8080
@@ -17,8 +17,8 @@ services:
     networks: 
       jenkins-network:
       nginx_net:
-    extra_hosts:
-      - oauth.dev.local:172.20.69.108
+    # extra_hosts:
+    #   - oauth.dev.local:172.20.69.108
   
   mail:
     image: mailhog/mailhog:v1.0.1
