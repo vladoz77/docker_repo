@@ -90,6 +90,7 @@ services:
       - redis
     networks:
       - authentik
+      - nginx_net
 
   # proxy-server:
   #   image: nginx:1.25.4-alpine
