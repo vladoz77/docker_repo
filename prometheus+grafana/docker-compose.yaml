@@ -27,8 +27,8 @@ services:
     ports:
       - 9090:9090
     networks:
-      prometheus:
-      nginx_net:
+      - prometheus
+      - nginx_net
   
   node-exporter:
     image: prom/node-exporter
@@ -46,7 +46,7 @@ services:
     ports:
       - 9100:9100
     networks:
-      prometheus:
+      - prometheus
 
   
   cadvisor:
@@ -66,8 +66,8 @@ services:
       - 8081:8080
     restart: unless-stopped
     networks:
-      prometheus:
-    
+      - prometheus
+
   grafana:
     image: grafana/grafana:10.2.4
     container_name: grafana
@@ -80,8 +80,8 @@ services:
       - grafana-data:/var/lib/grafana:rw
       - ./grafana.ini:/etc/grafana/grafana.ini
     networks:
-      nginx_net:
-      prometheus:
+      - nginx_net
+      - prometheus
 
   alertmanager:
     image: prom/alertmanager
@@ -95,8 +95,8 @@ services:
     ports:
       - 9093:9093
     networks:
-      nginx_net:
-      prometheus:
+      - nginx_net
+      - prometheus
       
 
     
