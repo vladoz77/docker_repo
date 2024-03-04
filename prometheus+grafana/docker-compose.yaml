@@ -5,14 +5,13 @@ volumes:
   alertmanager-data:
 
 networks:
-  ngix-manager_default:
+  nginx_net:
     external: true
   prometheus:
-  loki:
 
 services:
   prometheus:
-    image: prom/prometheus:v2.45.0
+    image: prom/prometheus
     container_name: prometheus
     restart: unless-stopped
     command: 
@@ -28,12 +27,11 @@ services:
     ports:
       - 9090:9090
     networks:
-       prometheus:
-       ngix-manager_default:
-         ipv4_address: 172.21.0.5
+      prometheus:
+      nginx_net:
   
   node-exporter:
-    image: prom/node-exporter:v1.6.0
+    image: prom/node-exporter
     container_name: node-exporter
     restart: unless-stopped
     volumes:
@@ -52,7 +50,7 @@ services:
 
   
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    image: gcr.io/cadvisor/cadvisor
     container_name: cadvisor
     privileged: true
     volumes:
@@ -71,7 +69,7 @@ services:
       prometheus:
     
   grafana:
-    image: grafana/grafana:10.0.1
+    image: grafana/grafana:10.2.4
     container_name: grafana
     ports:
       - 3000:3000
@@ -80,14 +78,13 @@ services:
     restart: unless-stopped
     volumes:
       - grafana-data:/var/lib/grafana:rw
+      - ./grafana.ini:/etc/grafana/grafana.ini
     networks:
-      ngix-manager_default:
-        ipv4_address: 172.21.0.10
+      nginx_net:
       prometheus:
-      loki:
 
   alertmanager:
-    image: prom/alertmanager:v0.25.0
+    image: prom/alertmanager
     container_name: alertmanager
     restart: unless-stopped
     command: 
@@ -98,9 +95,7 @@ services:
     ports:
       - 9093:9093
     networks:
-      loki:
-      ngix-manager_default:
-        ipv4_address: 172.21.0.6
+      nginx_net:
       prometheus:
       
 

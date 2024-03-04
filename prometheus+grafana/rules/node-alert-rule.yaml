@@ -24,7 +24,7 @@ groups:
         description: "Node memory for instance {{ $labels.instance }} has reached {{ $value }}%"
 
   - alert: NodeMemoryUsageAbove75%
-    expr: (100 - job:node_memory:available) >= 75
+    expr: (100 - job:node_memory:available) >= 85
     for: 2m
     labels:
         severity: critical
