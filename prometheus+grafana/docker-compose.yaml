@@ -69,7 +69,7 @@ services:
       - prometheus
 
   grafana:
-    image: grafana/grafana:10.2.4
+    image: grafana/grafana:10.2.6
     container_name: grafana
     ports:
       - 3000:3000

@@ -1,1 +1,0 @@
-Hello user $USER in $DESKTOP_SESSION. It's time to say $HELLO!

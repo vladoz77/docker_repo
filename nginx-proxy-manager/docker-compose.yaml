@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   app:
-    image: 'jc21/nginx-proxy-manager:2.10.4'
+    image: 'jc21/nginx-proxy-manager:2.11.2'
     restart: unless-stopped
     container_name: nginx-proxy-manager
     ports:
@@ -10,13 +10,13 @@ services:
       - '81:81' # Admin Web Port
     volumes:
       - data_nginx:/data
+      - ./letsencrypt:/etc/letsencrypt
     networks:
        nginx_net:
       
 
 volumes:
   data_nginx:
-  letsencrypt_nginx:
 
 networks:
   nginx_net:
