@@ -17,8 +17,8 @@ services:
     networks: 
       jenkins-network:
       nginx_net:
-    # extra_hosts:
-    #   - oauth.dev.local:172.20.69.108
+    extra_hosts:
+      - oauth.home.local:172.24.0.1
   
   mail:
     image: mailhog/mailhog:v1.0.1
