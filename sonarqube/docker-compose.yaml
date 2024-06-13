@@ -4,6 +4,7 @@ services:
   sonarqube:
     image: sonarqube:community
     container_name: sonarqube
+    restart: unless-stopped
     depends_on:
       - db
     environment:
@@ -15,14 +16,14 @@ services:
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
     ports:
-      - "9000:9000"
+      - "9090:9000"
     networks:
       sonarqube:
-      ngix-manager_default:
-        ipv4_address: 172.21.0.12
+      nginx_net:
   db:
     image: postgres:12
     container_name: sonarqube_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: sonar
       POSTGRES_PASSWORD: sonar
@@ -41,6 +42,6 @@ volumes:
 
 networks:
   sonarqube:
-  ngix-manager_default:
+  nginx_net:
     external: true
   

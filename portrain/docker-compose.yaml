@@ -12,6 +12,8 @@ services:
       - 9444:9443
     networks:
       - nginx_net
+    extra_hosts:
+      - oauth.home.local:172.24.0.1
 volumes:
   portainer_data:
 
