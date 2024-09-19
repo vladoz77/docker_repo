@@ -8,6 +8,7 @@ services:
     ports:
       - 8081:8081 # Web port
       - 8082:8082 # Docker repo port
+      - 8083:8083 # docker-proxy port
     networks:
       - nginx_net
 
