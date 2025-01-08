@@ -1,14 +1,17 @@
 version: "3.0"
 services:
   jenkins:
-    image: jenkins/jenkins:latest-jdk17
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: jenkins
     privileged: true
     restart: unless-stopped
     environment:
       - DOCKER_TLS_CERTDIR=/certs
+      - SSH_PRIVATE_KEY=${SSH_PRIVATE_KEY}
     volumes:
-      - jenkins-docker-certs:/certs/client:rw
+      - ./certs:/certs/client:rw
       - jenkins-data:/var/jenkins_home:rw
     ports:
       - 2376:2376
@@ -20,19 +23,10 @@ services:
     extra_hosts:
       - oauth.home.local:172.24.0.1
   
-  mail:
-    image: mailhog/mailhog:v1.0.1
-    container_name: mailhog
-    networks:
-      jenkins-network:
-    ports:
-        - 1025:1025
-        - 8025:8025
   
 
 
 volumes:
- jenkins-docker-certs:
  jenkins-data:
 
 networks:
