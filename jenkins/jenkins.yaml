@@ -17,8 +17,6 @@ unclassified:
 
 jenkins:
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin"
-
-  # Security Realm for user authentication
   securityRealm:
     local:
       allowsSignup: false
