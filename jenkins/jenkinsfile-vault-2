@@ -1,0 +1,26 @@
+pipeline {
+    agent any
+
+    
+    stages {
+        stage('Example') {
+            steps {
+                script {
+                    withCredentials([
+                        vaultString(credentialsId: 'cloud_id_secert', variable: 'CLOUD_ID'), 
+                        vaultString(credentialsId: 'folder_id_secret', variable: 'FOLDER_ID'), 
+                        vaultString(credentialsId: 'iam_token_secret', variable: 'IAM_TOKEN')
+                    ]) 
+                    {
+                        sh'''
+                        echo "cloud_id: ${CLOUD_ID}" > secret-cred.txt
+                        echo "folder_id: ${CLOUD_ID}" >> secret-cred.txt
+                        echo "iam_token: ${IAM_TOKEN}" >> secret-cred.txt
+                        '''
+                    }
+                }
+                
+            }
+        }
+    }
+}

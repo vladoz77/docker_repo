@@ -16,6 +16,7 @@ unclassified:
     url: http://jenkins.home.local
 
 jenkins:
+  numExecutors: 0
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin"
   securityRealm:
     local:

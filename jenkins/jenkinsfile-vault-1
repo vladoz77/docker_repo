@@ -1,0 +1,31 @@
+pipeline {
+    agent any
+
+    
+    stages {
+        stage('Example') {
+            steps {
+                script {
+                    withVault(vaultSecrets: [
+                        [path: '/kv/yc-sa-admin', secretValues: [
+                            [envVar: 'CLOUD_ID_SECRET', isRequired: false, vaultKey: 'cloud_id'], 
+                            [envVar: 'FOLDER_ID_SECRET', isRequired: false, vaultKey: 'folder_id'],
+                            [envVar: 'IAM_TOKEN_SECRET', isRequired: false, vaultKey: 'iam_token']
+                            ]
+                        ]
+                    ]) 
+                    
+                    {
+                    // Записываем секрет в файл
+                        sh '''
+                            echo "cloud_id: $CLOUD_ID_SECRET" > secret.txt
+                            echo "folder_id: $FOLDER_ID_SECRET" >> secret.txt
+                            echo "iam_token: $IAM_TOKEN_SECRET" >> secret.txt
+                        '''
+                    }
+                }
+                
+            }
+        }
+    }
+}
