@@ -16,7 +16,6 @@ services:
     cap_add:
       - IPC_LOCK
     command: vault server -config=/vault/config/vault.json
-
-
 volumes:
   vault-data:
+  
