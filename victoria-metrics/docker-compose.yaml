@@ -1,0 +1,84 @@
+services:
+  victoriametrics:
+    container_name: victoriametrics
+    image: victoriametrics/victoria-metrics:v1.118.0
+    restart: unless-stopped	
+    command:
+    - "--storageDataPath=/storage"
+    - "--retentionPeriod=30d"
+    - "--promscrape.config=/etc/prometheus/scrape.yaml"
+    ports:
+    - 8428:8428
+    volumes:
+    - vmstorage:/storage
+    - ./victoriametrics/scrape.yaml:/etc/prometheus/scrape.yaml
+    networks:
+    - monitoring_network
+
+  vmalert:
+    container_name: vmalert
+    image: victoriametrics/vmalert:v1.118.0
+    restart: unless-stopped	
+    command:
+    - "--remoteRead.url=http://victoriametrics:8428"
+    - "--datasource.url=http://victoriametrics:8428"
+    - "--rule=/etc/alerts/*.yaml"
+    - "--notifier.url=http://alertmanager:9093"
+    - "--external.url=http://grafana:3000"
+    ports:
+    - 8880:8880
+    volumes:
+    - ./vmalert/rules:/etc/alerts
+    depends_on:
+    - victoriametrics
+    - alertmanager
+    networks:
+    - monitoring_network
+
+  alertmanager:
+    container_name: alertmanager
+    image:  prom/alertmanager:v0.28.0
+    restart: unless-stopped	
+    command:
+    - "--config.file=/etc/alertmanager.yaml"
+    ports:
+    - 9093:9093
+    volumes:
+    - ./alertmanager/alertmanager.yaml:/etc/alertmanager.yaml
+    networks:
+    - monitoring_network
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:11.5.0
+    restart: unless-stopped
+    volumes:
+    - grafana:/var/lib/grafana
+    - ./grafana/datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml
+    - ./grafana/dashboards.yaml:/etc/grafana/provisioning/dashboards/dashboards.yaml
+    - ./grafana/victoriametrics-dashboards:/var/lib/grafana/dashboard/victoriametics-dashboards
+    ports:
+    - 3000:3000
+    depends_on:
+    - victoriametrics
+    networks:
+    - monitoring_network
+
+  karma:
+    container_name: karma
+    image: ghcr.io/prymitive/karma:v0.121
+    restart: unless-stopped
+    command:
+    - "--alertmanager.uri=http://alertmanager:9093"
+    ports:
+    - 8080:8080
+    depends_on:
+    - alertmanager
+    networks:
+    - monitoring_network
+
+volumes:
+  vmstorage:
+  grafana:
+networks:
+  monitoring_network:

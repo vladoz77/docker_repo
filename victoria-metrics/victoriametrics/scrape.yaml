@@ -1,0 +1,16 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+- job_name: victoriametics
+  static_configs:
+  - targets:
+    - victoriametrics:8428/metrics
+- job_name: vmalert
+  static_configs:
+  - targets:
+    - vmalert:8880/metrics
+- job_name: grafana
+  static_configs:
+  - targets:
+    - grafana:3000/metrics

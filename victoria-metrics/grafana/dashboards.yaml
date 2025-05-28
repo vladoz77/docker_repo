@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+- name: victoriametics-dashboards
+  type: file
+  updateIntervalSeconds: 30
+  editable: true
+  options:
+    path: /var/lib/grafana/dashboard/victoriametics-dashboards
