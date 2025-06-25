@@ -1,0 +1,14 @@
+pipeline {
+    agent any
+    stages{
+        stage('vault') {
+            steps {
+                withVault(vaultSecrets: [[path: '/kv/creds/my-secret-text', secretValues: [[envVar: 'MYSECRET', vaultKey: 'secret']]]]) {
+                    sh"""
+                    echo "secret-txt: $MYSECRET" > secret.txt
+                    """  
+                }
+            }
+        }
+    }
+}
