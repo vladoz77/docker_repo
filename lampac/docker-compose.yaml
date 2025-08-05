@@ -1,0 +1,17 @@
+services:
+  lampac:
+    image: immisterio/lampac
+    container_name: lampac
+    restart: always
+    ports:
+      - 80:80
+    volumes:
+      - ./init.conf:/home/init.conf
+      - ./manifest.json:/home/module/manifest.json
+    environment:  
+      - TZ=Europe/Moscow  
+    networks:  
+      - lampac-network  
+  
+networks:  
+  lampac-network:  
