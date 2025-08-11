@@ -4,43 +4,14 @@ services:
     container_name: lampac
     restart: always
     ports:
-      - 9118:9118
+      - 80:80
     volumes:
       - ./init.conf:/home/init.conf
       - ./manifest.json:/home/module/manifest.json
     environment:  
       - TZ=Europe/Moscow  
     networks:  
-      - lampac-network 
-  nginx:
-    image: nginx:latest
-    container_name: nginx
-    ports:
-      - 80:80
-      - 443:443
-    restart: always
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/lampac.conf:ro
-      - ./certbot/conf/:/etc/letsencrypt/:ro
-      - ./certbot/www/:/var/www/certbot/:rw
-    networks:
-      - lampac-network
-  certbot:
-    image: certbot/certbot:latest
-    volumes:
-      - ./certbot/conf/:/etc/letsencrypt/:rw
-      - ./certbot/www/:/var/www/certbot/:rw
-    networks:
-      - lampac-network 
-  certbot-renew:
-    image: certbot/certbot:latest
-    volumes:
-      - ./certbot/www/:/var/www/certbot/:rw
-      - ./certbot/conf/:/etc/letsencrypt/:rw
-    entrypoint: ["/bin/sh", "-c"]
-    command: ["while true; do certbot renew --webroot --webroot-path /var/www/certbot/ --quiet && sleep 12h; done"]
-    networks:
-      - lampac-network
+      - lampac-network  
   
 networks:  
   lampac-network:  
