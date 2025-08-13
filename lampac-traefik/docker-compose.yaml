@@ -7,18 +7,26 @@ services:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--entrypoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.websecure.http.tls=true"
       - "--providers.docker.exposedbydefault=false"
       - "--providers.docker.network=lampac-network"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      # Let's Encrypt configuration
+      - "--certificatesresolvers.le.acme.email=vladoz77@yandex.ru"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`dashboard.test.home.local`)"
-      # - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.kz.home-local.site`)"
       - "traefik.http.routers.dashboard.service=api@internal"
-      # - "traefik.http.services.api.loadbalancer.server.port=8080"
+      - "traefik.http.routers.dashboard.tls.certresolver=le"
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - "./letsencrypt:/letsencrypt"
     networks:  
       - lampac-network 
   lampac:
@@ -27,10 +35,11 @@ services:
     restart: always
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.lampac.rule=Host(`lampa.test.home.local`)"
-      - "traefik.http.routers.lampac.entrypoints=web"
+      - "traefik.http.routers.lampac.rule=Host(`lampa.kz.home-local.site`)"
+      - "traefik.http.routers.lampac.entrypoints=websecure"
+      - "traefik.http.routers.lampac.tls.certresolver=le"
     ports:
-      - 9118:9118
+      - "9118"
     volumes:
       - ./init.conf:/home/init.conf
       - ./manifest.json:/home/module/manifest.json
