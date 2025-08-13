@@ -1,0 +1,43 @@
+services:
+  traefik:
+    image: traefik:v3.5
+    container_name: traefik
+    restart: always
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=lampac-network"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.test.home.local`)"
+      # - "traefik.http.routers.dashboard.entrypoints=web"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      # - "traefik.http.services.api.loadbalancer.server.port=8080"
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:  
+      - lampac-network 
+  lampac:
+    image: immisterio/lampac
+    container_name: lampac
+    restart: always
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.lampac.rule=Host(`lampa.test.home.local`)"
+      - "traefik.http.routers.lampac.entrypoints=web"
+    ports:
+      - 9118:9118
+    volumes:
+      - ./init.conf:/home/init.conf
+      - ./manifest.json:/home/module/manifest.json
+    environment:  
+      - TZ=Europe/Moscow  
+    networks:  
+      - lampac-network  
+  
+networks:  
+  lampac-network:  

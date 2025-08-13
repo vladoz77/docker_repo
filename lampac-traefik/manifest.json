@@ -1,0 +1,24 @@
+[
+  {
+    "enable": true,
+    "dll": "SISI.dll"
+  },
+  {
+    "enable": true,
+    "dll": "Online.dll"
+  },
+  {
+    "enable": true,
+    "dll": "DLNA.dll"
+  },
+  {
+    "enable": true,
+    "initspace": "Jackett.ModInit",
+    "dll": "JacRed.dll"
+  },
+  {
+    "enable": false,
+    "initspace": "TorrServer.ModInit",
+    "dll": "TorrServer.dll"
+  }
+]
