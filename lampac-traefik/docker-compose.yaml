@@ -17,10 +17,16 @@ services:
       - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
     labels:
+      # Enable self‑routing
       - "traefik.enable=true"
+      # Dashboard router
       - "traefik.http.routers.dashboard.rule=Host(`dashboard.kz.home-local.site`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.service=api@internal"
       - "traefik.http.routers.dashboard.tls.certresolver=le"
+      # Basic‑auth middleware
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$CmiVRFjs$$bPQcSgQ.2HcTzM.HVTvAl1"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
     ports:
       - "80:80"
       - "443:443"
