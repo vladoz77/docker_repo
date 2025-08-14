@@ -1,0 +1,30 @@
+services:
+  marzban:
+    image: gozargah/marzban:latest
+    restart: always
+    network_mode: host
+    env_file: .env
+    volumes:
+      - ./marzban/xray_config.json:/var/lib/marzban/xray_config.json
+    depends_on:
+     - mysql
+
+  mysql:
+    image: mysql:lts
+    env_file: .env
+    restart: always
+    network_mode: host
+    command:
+      - --mysqlx=OFF
+      - --bind-address=127.0.0.1
+      - --character_set_server=utf8mb4
+      - --collation_server=utf8mb4_unicode_ci
+      - --disable-log-bin
+      - --host-cache-size=0
+      - --innodb-open-files=1024
+      - --innodb-buffer-pool-size=268435456
+    volumes:
+      - mysql:/var/lib/mysql
+
+volumes:
+  mysql:
