@@ -75,8 +75,8 @@
     "inbounds": [
         {
             "tag": "VLESS TCP REALITY",
-            "listen": "0.0.0.0",
-            "port": 443,
+            "listen": "127.0.0.1",
+            "port": 10000,
             "protocol": "vless",
             "settings": {
                 "clients": [],
@@ -84,7 +84,9 @@
             },
             "streamSettings": {
                 "network": "tcp",
-                "tcpSettings": {},
+                "tcpSettings": {
+                    "acceptProxyProtocol": true
+                },
                 "security": "reality",
                 "realitySettings": {
                     "show": false,
