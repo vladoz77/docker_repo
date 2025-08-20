@@ -26,5 +26,11 @@ services:
     volumes:
       - mysql:/var/lib/mysql
 
+  warp:
+    container_name: warp_v3
+    image: monius/docker-warp-socks:v3
+    ports:
+      - 40000:9091
+
 volumes:
   mysql:
