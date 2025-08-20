@@ -16,7 +16,7 @@ services:
     network_mode: host
     command:
       - --mysqlx=OFF
-      - --bind-address=127.0.0.1
+      - --bind-address=0.0.0.0
       - --character_set_server=utf8mb4
       - --collation_server=utf8mb4_unicode_ci
       - --disable-log-bin
