@@ -1,6 +1,7 @@
 services:
   marzban:
     image: gozargah/marzban:latest
+    container_name: marzban
     restart: always
     network_mode: host
     env_file: .env
@@ -11,18 +12,16 @@ services:
 
   mysql:
     image: mysql:lts
+    container_name: mysql
     env_file: .env
     restart: always
     network_mode: host
-    command:
-      - --mysqlx=OFF
-      - --bind-address=0.0.0.0
-      - --character_set_server=utf8mb4
-      - --collation_server=utf8mb4_unicode_ci
-      - --disable-log-bin
-      - --host-cache-size=0
-      - --innodb-open-files=1024
-      - --innodb-buffer-pool-size=268435456
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "marzban", "--password=${MYSQL_PASSWORD}"]
+      start_period: 5s
+      interval: 5s
+      timeout: 5s
+      retries: 55
     volumes:
       - mysql:/var/lib/mysql
 
