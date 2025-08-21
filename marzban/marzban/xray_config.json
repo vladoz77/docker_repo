@@ -1,145 +1,150 @@
 {
-    "log": {
-        "loglevel": "warning"
-    },
-    "routing": {
-        "rules": [
-            {
-                "ip": [
-                    "geoip:private"
-                ],
-                "outboundTag": "block",
-                "type": "field"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "geosite:category-ads-all"
-                ],
-                "outboundTag": "block"
-            },
-            {
-                "protocol": [
-                    "bittorrent"
-                ],
-                "outboundTag": "block",
-                "type": "field"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "geosite:google"
-                ],
-                "outboundTag": "IPv4"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "domain:gemini.google.com"
-                ],
-                "outboundTag": "IPv4"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "geosite:openai"
-                ],
-                "outboundTag": "IPv4"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "geosite:intel",
-                    "geosite:category-gov-ru"
-                ],
-                "outboundTag": "warp"
-            },
-            {
-                "type": "field",
-                "ip": [
-                    "geoip:ru"
-                ],
-                "outboundTag": "warp"
-            },
-            {
-                "type": "field",
-                "domain": [
-                    "regexp:.*\\.xn--$",
-                    "regexp:.*\\.ru$",
-                    "regexp:.*\\.su$"
-                ],
-                "outboundTag": "warp"
-            }
-        ]
-    },
-    "inbounds": [
-        {
-            "tag": "VLESS TCP REALITY",
-            "listen": "127.0.0.1",
-            "port": 10000,
-            "protocol": "vless",
-            "settings": {
-                "clients": [],
-                "decryption": "none"
-            },
-            "streamSettings": {
-                "network": "tcp",
-                "tcpSettings": {
-                    "acceptProxyProtocol": true
-                },
-                "security": "reality",
-                "realitySettings": {
-                    "show": false,
-                    "dest": "tradingview.com:443",
-                    "xver": 0,
-                    "serverNames": [
-                        "tradingview.com"
-                    ],
-                    "privateKey": "4ErnwFwwdsR0eq2np73JuPysFiEVi1xIVNKpRezc6TE",
-                    "shortIds": [
-                        "",
-                        "8d9b438b097eb1ca"
-                    ]
-                }
-            },
-            "sniffing": {
-                "enabled": true,
-                "destOverride": [
-                    "http",
-                    "tls",
-                    "quic"
-                ]
-            }
-        }
-    ],
-    "outbounds": [
-        {
-            "protocol": "freedom",
-            "tag": "direct"
-        },
-        {
-            "protocol": "blackhole",
-            "tag": "block"
-        },
-        {
-            "tag": "IPv4",
-            "protocol": "freedom",
-            "settings": {
-                "domainStrategy": "UseIPv4"
-            }
-        },
-        {
-            "tag": "warp",
-            "protocol": "socks",
-            "settings": {
-                "servers": [
-                    {
-                        "address": "127.0.0.1",
-                        "port": 40000,
-                        "users": []
-                    }
-                ]
-            }
-        }
+  "log": {
+    "loglevel": "debug"
+  },
+  "routing": {
+    "rules": [
+      {
+        "ip": [
+          "geoip:private"
+        ],
+        "outboundTag": "block",
+        "type": "field"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "geosite:category-ads-all"
+        ],
+        "outboundTag": "block"
+      },
+      {
+        "protocol": [
+          "bittorrent"
+        ],
+        "outboundTag": "block",
+        "type": "field"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "geosite:google"
+        ],
+        "outboundTag": "IPv4"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:gemini.google.com"
+        ],
+        "outboundTag": "IPv4"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "geosite:openai"
+        ],
+        "outboundTag": "IPv4"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "geosite:intel",
+          "geosite:category-gov-ru"
+        ],
+        "outboundTag": "warp"
+      },
+      {
+        "type": "field",
+        "ip": [
+          "geoip:ru"
+        ],
+        "outboundTag": "warp"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "regexp:.*\\.xn--$",
+          "regexp:.*\\.ru$",
+          "regexp:.*\\.su$"
+        ],
+        "outboundTag": "warp"
+      }
     ]
+  },
+  "inbounds": [
+    {
+      "tag": "VLESS TCP REALITY",
+      "listen": "127.0.0.1",
+      "port": 10000,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "fd6bcca4-7421-428d-8408-70109a9da1c4",
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "show": false,
+          "dest": "www.tradingview.com:443",
+          "xver": 0,
+          "serverNames": [
+            "tradingview.com",
+            "www.tradingview.com"
+          ],
+          "privateKey": "4ErnwFwwdsR0eq2np73JuPysFiEVi1xIVNKpRezc6TE",
+          "shortIds": [
+            "8d9b438b097eb1ca"
+          ]
+        }
+      },
+      "sniffing": {
+        "enabled": true,
+        "destOverride": [
+          "http",
+          "tls",
+          "quic"
+        ]
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "tag": "direct",
+      "settings": {
+        "domainStrategy": "UseIPv4"
+      }
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block"
+    },
+    {
+      "tag": "IPv4",
+      "protocol": "freedom",
+      "settings": {
+        "domainStrategy": "UseIPv4"
+      }
+    },
+    {
+      "tag": "warp",
+      "protocol": "socks",
+      "settings": {
+        "servers": [
+          {
+            "address": "127.0.0.1",
+            "port": 40000,
+            "users": []
+          }
+        ]
+      }
+    }
+  ]
 }
