@@ -1,25 +1,52 @@
 ## Подключение worker-agent через JLNMP
 
-Для начала нам необходимо получить api token для учетной записи, чтобы можно было работать через api 
-
-1. ### Получи CSRF-токен
+0. Установим необходимые пакеты
 
 ```bash
-CRUMB=$(curl -k "https://admin:admin@jenkins.yc.home-local.site/crumbIssuer/api/xml?xpath=concat(//crumbRequestField,%22:%22,//crumb)" -c cookies.txt)
+sudo apt update -y
+sudo apt install openjdk-17-jre jq -y 
 ```
+Для начала нам необходимо получить api token для учетной записи, чтобы можно было работать через api 
+
+1. ### Получение API-токена через Jenkins API
+
+Для автоматизации получения секрета агента, сначала получим API-токен.
+
+```bash
+# Получаем XML целиком
+RESPONSE=$(curl -k -s \
+  -u "admin:admin" \
+  "https://jenkins.yc.home-local.site/crumbIssuer/api/xml" \
+  -c cookies.txt)
+
+# Извлекаем нужные части
+CRUMB_FIELD=$(echo "$RESPONSE" | grep -oP '<crumbRequestField>\K[^<]+')
+CRUMB_VALUE=$(echo "$RESPONSE" | grep -oP '<crumb>\K[^<]+')
+
+# Формируем заголовок
+CRUMB="${CRUMB_FIELD}:${CRUMB_VALUE}"
+```
+>🔐 Замените admin:admin на свои учётные данные. 
+
 
 2. ### Сгенерируй новый API-токен
 
 ```bash
-API_TOKEN=$(curl -k 'https://admin:admin@jenkins.yc.home-local.site/user/admin/descriptorByName/jenkins.security.ApiTokenProperty/generateNewToken' \
---data 'newTokenName=kb-token' -b cookies.txt -H $CRUMB | jq -r '.data.tokenValue')
+API_TOKEN=$(curl -k -s \
+  -u "admin:admin" \
+  -b cookies.txt \
+  -H "$CRUMB" \
+  --data "newTokenName=automation-token" \
+  "https://jenkins.yc.home-local.site/user/admin/descriptorByName/jenkins.security.ApiTokenProperty/generateNewToken" \
+  | jq -r '.data.tokenValue')
 ```
+>✅ Токен будет использован для последующих API-запросов. 
+
+
+
 3. ### Настройка ноды на Jenkins server
 
-Необходимо настроить ноду, которую будем подключать. 
-Для автоматической настройки ноды, я использую плагин JCAS
-
-Создам файлик Jenkins.yaml и добавляем такую конфигурацию:
+Настройте агента на мастере с помощью Jenkins Configuration as Code (JCASC).
 
 ```yaml
 jenkins:
@@ -35,29 +62,50 @@ jenkins:
       mode: NORMAL
 ```
 
-3. ### Получим секрет
+3. ### Получение секрета агента
 
-Для подключени worker нам необходим секрет, можно получить через API
+После создания ноды, получите её секрет через API:
 
 ```bash
 SECRET=$(curl -k -s   -u "admin:${API_TOKEN}"   "https://jenkins.yc.home-local.site/computer/agent-1/slave-agent.jnlp" | sed "s/.*<application-desc><argument>\([a-z0-9]*\).*/\1\n/")
+echo ${SECRET}
 ```
 
-4. ### Подключаем агент
+4. ###  Ручной запуск агента (проверка)
+
+Создадим директорию для агента
+
+```bash
+mkdir -p jenkins-agent && cd jenkins-agent
+```
+
+Скачаем агент
 
 ```bash
 curl -sO https://jenkins.yc.home-local.site/jnlpJars/agent.jar
-java -jar agent.jar -url https://jenkins.yc.home-local.site/ -secret ${SECRET} -name "agent-1" -webSocket -workDir "/home/ubuntu/jenkins-age
-nt"
 ```
 
-5. ### Создадим юнит systemd
-
-Создадим папку `/home/ubuntu/jenkins-agent`
+Попробуем запустить агент руками
 
 ```bash
-sudo mkdir -p /home/ubuntu/jenkins-agent
+java -jar agent.jar \
+  -url https://jenkins.yc.home-local.site \
+  -webSocket \
+  -secret ${SECRET} \
+  -name "agent-1" \
+  -workDir "/home/ubuntu/jenkins-agent"
+  
 ```
+Вывод:
+
+```bash
+Aug 25, 2025 12:56:23 PM hudson.remoting.Launcher$CuiListener status
+INFO: Connected
+```
+
+Обратите внимание имя агента должно собрать с именем агента, которое задали в Jenkins
+
+5. ### Автоматизация: systemd-сервис
 
 Перенесем `agent.jar` в `/usr/local/bin`
 
@@ -68,13 +116,12 @@ sudo mv agent.jar /usr/local/bin
 Создадим файл сервиса `jenkins-agent.service`
 
 ```bash
-sudo vim jenkins-agent.service
+sudo vim /etc/systemd/system/jenkins-agent.service
 ```
 
 И внесем данные:
 
 ```bash
-sudo cat /etc/systemd/system/jenkins-agent.service
 [Unit]
 Description=Jenkins Agent
 After=network.target
@@ -116,6 +163,11 @@ sudo systemctl enable --now  jenkins-agent.service
 
 ```bash
 sudo systemctl status  jenkins-agent.service
+```
+
+Если все хорош, вывод будет следующим
+
+```bash
 ● jenkins-agent.service - Jenkins Agent
      Loaded: loaded (/etc/systemd/system/jenkins-agent.service; enabled; vendor preset: enabled)
      Active: active (running) since Mon 2025-08-25 12:08:57 UTC; 1min 3s ago
