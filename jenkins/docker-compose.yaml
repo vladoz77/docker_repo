@@ -1,4 +1,3 @@
-version: "3.0"
 services:
   jenkins:
     build:
@@ -7,23 +6,57 @@ services:
     container_name: jenkins
     privileged: true
     restart: unless-stopped
-    environment:
-      - DOCKER_TLS_CERTDIR=/certs
-      - SSH_PRIVATE_KEY=${SSH_PRIVATE_KEY}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jenkins.rule=Host(`jenkins.yc.home-local.site`)"
+      - "traefik.http.routers.jenkins.entrypoints=websecure"
+      - "traefik.http.routers.jenkins.tls.certresolver=le"
+      - "traefik.http.services.jenkins.loadbalancer.server.port=8080"
     volumes:
-      - ./certs:/certs/client:rw
       - jenkins-data:/var/jenkins_home:rw
     ports:
       - 2376:2376
       - 8080:8080
       - 50000:50000
-    networks: 
+    networks:
       jenkins-network:
-      nginx_net:
-    extra_hosts:
-      - oauth.home.local:172.24.0.1
-  
-  
+
+  traefik:
+    image: traefik:v3.5
+    container_name: traefik
+    restart: always
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.websecure.http.tls=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=jenkins-network"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      # Let's Encrypt configuration
+      - "--certificatesresolvers.le.acme.email=vladoz77@yandex.ru"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+    labels:
+      # Enable self‑routing
+      - "traefik.enable=true"
+      # Dashboard router
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.yc.home-local.site`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls.certresolver=le"
+      # Basic‑auth middleware
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$CmiVRFjs$$bPQcSgQ.2HcTzM.HVTvAl1"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "./letsencrypt:/letsencrypt"
+    networks:
+      - jenkins-network
 
 
 volumes:
@@ -31,10 +64,3 @@ volumes:
 
 networks:
   jenkins-network:
-  nginx_net:
-    external: true
-      
-      
-
-      
-  

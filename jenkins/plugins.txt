@@ -18,4 +18,4 @@ ssh-slaves:latest
 timestamper:latest
 workflow-aggregator:latest
 ws-cleanup:latest
-adoptopenjdk:1.7
+adoptopenjdk:latest

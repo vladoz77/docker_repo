@@ -1,4 +1,4 @@
-FROM jenkins/jenkins:lts-jdk17
+FROM jenkins/jenkins:lts-jdk21
 
 # Install Jenkins plugins
 COPY plugins.txt /usr/share/jenkins/ref/plugins.txt

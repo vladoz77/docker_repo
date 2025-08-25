@@ -1,19 +1,6 @@
-credentials:
-  system:
-    domainCredentials:
-    - credentials:
-      - basicSSHUserPrivateKey:
-          scope: SYSTEM
-          id: ubuntu-agent-ssh
-          username: jenkins
-          description: "SSH passphrase with private key file."
-          privateKeySource:
-            directEntry:
-              privateKey: "${SSH_PRIVATE_KEY}"
-
 unclassified:
   location:
-    url: http://jenkins.home.local
+    url: https://jenkins.yc.home-local.site
 
 jenkins:
   numExecutors: 0
@@ -24,24 +11,19 @@ jenkins:
       users:
       - id: "admin"
         password: "admin"
+
   nodes:
   - permanent:
-      labelString: "ubuntu-agent"
-      mode: NORMAL
-      name: "ubuntu-agent"
-      remoteFS: "/home/jenkins/jenkins-agent"
+      name: "agent-1"
+      labelString: "linux docker build"
+      remoteFS: "/home/ubuntu/jenkins-agent"
+      numExecutors: 2
       launcher:
-        ssh:
-          host: 192.168.59.100
-          port: 22
-          credentialsId: ubuntu-agent-ssh
-          launchTimeoutSeconds: 60
-          maxNumRetries: 3
-          retryWaitTime: 30
-          sshHostKeyVerificationStrategy:
-            manuallyTrustedKeyVerificationStrategy:
-              requireInitialManualTrust: false
-  # Tool Configuration
+        inbound:
+          webSocket: true
+      mode: NORMAL
+
+# Tool Configuration
 tool:
   git:
     installations:
