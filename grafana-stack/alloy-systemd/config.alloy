@@ -1,13 +1,13 @@
 // Define where to send logs for storage
 prometheus.remote_write "prometheus" {
   endpoint {
-    url = "http://prometheus:9090/api/v1/write"
+    url = "https://prometheus.monitoring.home-local.site/api/v1/write"
   }
 }
 
 loki.write "loki" {
   endpoint {
-    url = "http://loki:3100/loki/api/v1/push"
+    url = "http://loki.monitoring.home-local.site/loki/api/v1/push"
     batch_size = "1MiB"
     batch_wait = "2s"
   }
@@ -178,6 +178,18 @@ local.file_match "system" {
       __path__    = "/var/log/nginx/*.log",
       job         = "nginx",
       log_type    = "nginx",
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/auth.log",
+      job         = "system-logs",
+      log_type    = "auth",
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/syslog",
+      job         = "system-logs",
+      log_type    = "syslog",
     },
   ]
 }

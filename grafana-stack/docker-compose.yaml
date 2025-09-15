@@ -1,10 +1,41 @@
 services:
+  traefik:
+    image: traefik:v3.5
+    container_name: traefik
+    restart: always
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entryPoints.websecure.address=:443"
+      - "--entryPoints.websecure.http.tls=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=lampac-network"
+      - "--entryPoints.web.http.redirections.entryPoint.to=websecure"
+      # Let's Encrypt configuration
+      - "--certificatesresolvers.le.acme.email=vladoz77@yandex.ru"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "./letsencrypt:/letsencrypt"
+    networks:  
+      - grafana-networks
+  
   prometheus:
     image:  docker.io/prom/prometheus:v3.5.0
     container_name: prometheus
     restart: unless-stopped
-    ports:
-      - "9090:9090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.monitoring.home-local.site`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls.certresolver=le"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      - "traefik.http.routers.prometheus.service=prometheus"
     command: 
       - --config.file=/etc/prometheus/config.yaml
       - --web.enable-remote-write-receiver
@@ -23,6 +54,11 @@ services:
     restart: unless-stopped	
     command:
     - "--config.file=/etc/alertmanager.yaml"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.monitoring.home-local.site`)"
+      - "traefik.http.routers.alertmanager.entrypoints=websecure"
+      - "traefik.http.routers.alertmanager.tls.certresolver=le"
     ports:
     - 9093:9093
     volumes:
@@ -36,47 +72,29 @@ services:
     restart: unless-stopped
     command: 
     - -config.file=/etc/loki/loki.yaml
-    ports:
-    - 3001:3001
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.loki.rule=Host(`loki.monitoring.home-local.site`)"
+      - "traefik.http.routers.loki.entrypoints=websecure"
+      - "traefik.http.routers.loki.tls=true"
+      - "traefik.http.routers.loki.tls.certresolver=le"
+      - "traefik.http.services.loki.loadbalancer.server.port=3100"
+      - "traefik.http.routers.loki.service=loki"
     volumes:
     - ./config/loki/loki.yaml:/etc/loki/loki.yaml:ro
     - loki-data:/loki
     networks:
     - grafana-networks
 
-  alloy:
-    image: grafana/alloy:v1.10.2
-    container_name: alloy
-    restart: unless-stopped
-    hostname: fedora
-    privileged: true
-    ports:
-      - 12345:12345
-    command: 
-     - run
-     - --server.http.listen-addr=0.0.0.0:12345
-     - --storage.path=/data
-     - /etc/alloy/config.alloy
-    volumes:
-      - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
-      - alloy-data:/var/lib/alloy/data
-      - /:/rootfs:ro
-      - /run:/run:ro
-      - /var/log:/var/log:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker/:ro
-      - /run/udev/data:/run/udev/data:ro
-      - /var/log/journal:/var/log/journal:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - prometheus
-    networks:
-      - grafana-networks
-
   grafana:
     container_name: grafana
     image: grafana/grafana:11.5.0
     restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.monitoring.home-local.site`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=le"
     volumes:
     - grafana-data:/var/lib/grafana
     ports:
