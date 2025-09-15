@@ -1,0 +1,215 @@
+// Define where to send logs for storage
+prometheus.remote_write "prometheus" {
+  endpoint {
+    url = "http://prometheus:9090/api/v1/write"
+  }
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+    batch_size = "1MiB"
+    batch_wait = "2s"
+  }
+  
+}
+
+// Exposes Docker targets using the docker socket
+prometheus.exporter.cadvisor "docker" {
+  docker_host = "unix:///var/run/docker.sock"
+  storage_duration = "5m"
+}
+
+prometheus.scrape "docker" {
+  targets    =  prometheus.exporter.cadvisor.docker.targets
+  // pushes them to the relabeler
+  forward_to = [prometheus.relabel.docker_relabel.receiver]
+}
+
+// Adds container labels and metadata
+prometheus.relabel "docker_relabel" {
+  rule {
+    target_label = "container"
+    source_labels = [
+      "name",
+    ]
+  }
+  
+  rule {
+    target_label = "job"
+    replacement = "docker-metrics"
+  }
+  
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+}
+
+// System metrics
+prometheus.exporter.unix "metrics" {
+  disable_collectors = ["ipvs", "btrfs", "infiniband", "xfs", "zfs"]
+  enable_collectors = ["meminfo"]
+
+  filesystem {
+    fs_types_exclude     = "^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|tmpfs|fusectl|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$"
+    mount_points_exclude = "^/(dev|proc|run/credentials/.+|sys|var/lib/docker/.+)($|/)"
+    mount_timeout        = "5s"
+  }
+
+  netclass {
+    ignored_devices = "^(veth.*|cali.*|[a-f0-9]{15})$"
+  }
+
+  netdev {
+    device_exclude = "^(veth.*|cali.*|[a-f0-9]{15})$"
+  }
+}
+
+prometheus.scrape "linux_node" {
+  scrape_interval = "15s"
+  targets = prometheus.exporter.unix.metrics.targets
+  forward_to = [
+    prometheus.relabel.metrics.receiver,
+  ]
+}
+
+
+prometheus.relabel "metrics" {
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+
+  rule {
+    target_label = "job"
+    replacement = string.format("%s-metrics", constants.hostname)
+  }
+  
+  forward_to = [prometheus.remote_write.prometheus.receiver]
+}
+
+// Scrape grafana
+prometheus.scrape "grafana" {
+	targets = [
+		{
+			"__address__"      = "grafana:3000",
+			"__scheme__"       = "http",
+			"__metrics_path__" = "/metrics",
+		},
+	]
+
+	scrape_interval = "15s"
+  job_name = "grafana"
+
+	forward_to = [prometheus.remote_write.prometheus.receiver]
+}
+
+
+// System logs config
+loki.source.journal "journal" {
+  max_age    = "12h0m0s"
+  forward_to = [loki.write.loki.receiver]
+  path          = "/var/log/journal"
+  relabel_rules = loki.relabel.journal.rules
+  labels = {
+    component = string.format("%s-journal", constants.hostname),
+  }
+}
+
+loki.relabel "journal" {
+  forward_to = []
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    regex         = "^(docker|containerd|kubelet|nginx|postgresql|sshd|fail2ban|node_exporter)\\.service$"
+    action        = "keep"
+  }
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+  rule {
+    source_labels = ["__journal__boot_id"]
+    target_label  = "boot_id"
+  }
+  rule {
+    source_labels = ["__journal__transport"]
+    target_label  = "transport"
+  }
+}
+
+loki.source.file "system" {
+  targets    = local.file_match.system.targets
+  forward_to = [loki.write.loki.receiver]
+}
+
+local.file_match "system" {
+  path_targets = [
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/messages",
+      job         = "system-logs",
+      log_type    = "messages",
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/secure",
+      job         = "system-logs",
+      log_type    = "secure",
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/cron",
+      job         = "system-logs",
+      log_type    = "cron",
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/boot.log",
+      job         = "system-logs",
+      log_type    = "boot",
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/dnf*.log*",
+      job         = "system-logs",
+      log_type    = "dnf",
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/nginx/*.log",
+      job         = "nginx",
+      log_type    = "nginx",
+    },
+  ]
+}
+
+
+// Docker logs config
+discovery.docker "dockerlogs" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "dockerlogs" {
+  targets = discovery.docker.dockerlogs.targets
+  
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex = "/(.*)"
+    target_label = "container_name"
+  }
+  
+  rule {
+    source_labels = ["__meta_docker_container_image"]
+    target_label = "container_image"
+  }
+}
+
+loki.source.docker "default" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.dockerlogs.targets
+  labels     = {"platform" = "docker"}
+  relabel_rules = discovery.relabel.dockerlogs.rules
+  forward_to = [loki.write.loki.receiver]
+}
+
+// Enable live debugging features (empty config means use defaults)
+livedebugging{}

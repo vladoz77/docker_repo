@@ -1,0 +1,95 @@
+services:
+  prometheus:
+    image:  docker.io/prom/prometheus:v3.5.0
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    command: 
+      - --config.file=/etc/prometheus/config.yaml
+      - --web.enable-remote-write-receiver
+      - --storage.tsdb.retention.time=7d
+      - --storage.tsdb.retention.size=2GB
+    volumes:
+      - ./config/prometheus/config.yaml:/etc/prometheus/config.yaml
+      - ./config/prometheus/rules:/etc/prometheus/rules
+      - prometheus-data:/prometheus
+    networks:
+      - grafana-networks
+
+  alertmanager:
+    container_name: alertmanager
+    image:  prom/alertmanager:v0.28.0
+    restart: unless-stopped	
+    command:
+    - "--config.file=/etc/alertmanager.yaml"
+    ports:
+    - 9093:9093
+    volumes:
+    - ./config/prometheus/alertmanager.yaml:/etc/alertmanager.yaml
+    networks:
+    - grafana-networks
+
+  loki:
+    image: grafana/loki:3.5.5-amd64
+    container_name: loki
+    restart: unless-stopped
+    command: 
+    - -config.file=/etc/loki/loki.yaml
+    ports:
+    - 3001:3001
+    volumes:
+    - ./config/loki/loki.yaml:/etc/loki/loki.yaml:ro
+    - loki-data:/loki
+    networks:
+    - grafana-networks
+
+  alloy:
+    image: grafana/alloy:v1.10.2
+    container_name: alloy
+    restart: unless-stopped
+    hostname: fedora
+    privileged: true
+    ports:
+      - 12345:12345
+    command: 
+     - run
+     - --server.http.listen-addr=0.0.0.0:12345
+     - --storage.path=/data
+     - /etc/alloy/config.alloy
+    volumes:
+      - ./config/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - alloy-data:/var/lib/alloy/data
+      - /:/rootfs:ro
+      - /run:/run:ro
+      - /var/log:/var/log:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker/:ro
+      - /run/udev/data:/run/udev/data:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - prometheus
+    networks:
+      - grafana-networks
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:11.5.0
+    restart: unless-stopped
+    volumes:
+    - grafana-data:/var/lib/grafana
+    ports:
+    - 3000:3000
+    depends_on:
+    - prometheus
+    networks:
+    - grafana-networks
+
+networks:
+  grafana-networks:
+volumes:
+  prometheus-data:
+  alloy-data:
+  grafana-data:
+  loki-data:
