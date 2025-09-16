@@ -35,6 +35,7 @@ Config user permission for docker
 
 ```bash
 sudo chgrp -R docker /var/lib/docker
+sudo find /var/lib/docker/containers/* -name "*-json.log" -exec chmod 644 {} \
 ```
 
 ## Config alloy service
