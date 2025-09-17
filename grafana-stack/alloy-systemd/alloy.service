@@ -5,6 +5,9 @@ After=network.target
 [Service]
 Type=simple
 User=alloy
+Group=alloy
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+AmbientCapabilities=CAP_DAC_READ_SEARCH
 ExecStart=/usr/local/bin/alloy run --storage.path=/tmp/alloy/ /etc/alloy/config.alloy
 
 [Install]

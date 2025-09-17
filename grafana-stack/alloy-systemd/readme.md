@@ -9,6 +9,7 @@ We can also get the Alloy binary from github.
 To check the latest version of Alloy, visit its https://github.com/grafana/alloy/releases.
 
 ```bash
+sudo apt install unzip -y
 curl -O -L "https://github.com/grafana/alloy/releases/download/v1.10.2/alloy-linux-amd64.zip"
 unzip "alloy-linux-amd64.zip"
 sudo install alloy-linux-amd64 /usr/local/bin/alloy
@@ -31,13 +32,6 @@ Verify that the user is now in the groups
 sudo groups alloy
 ```
 
-Config user permission for docker
-
-```bash
-sudo chgrp -R docker /var/lib/docker
-sudo find /var/lib/docker/containers/* -name "*-json.log" -exec chmod 644 {} \
-```
-
 ## Config alloy service
 
 Create folder for config alloy
@@ -56,7 +50,8 @@ sudo mv alloy.service  /etc/systemd/system/
 Restart Alloy and check status
 
 ```bash
-sudo systemctl restart alloy.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now alloy.service
 sudo systemctl status alloy.service
 sudo journalctl -u alloy.service -f
 ```

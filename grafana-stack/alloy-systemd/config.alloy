@@ -1,13 +1,13 @@
 // Define where to send logs for storage
 prometheus.remote_write "prometheus" {
   endpoint {
-    url = "https://prometheus.monitoring.home-local.site/api/v1/write"
+    url = "https://prometheus.mon.home-local.site/api/v1/write"
   }
 }
 
 loki.write "loki" {
   endpoint {
-    url = "http://loki.monitoring.home-local.site/loki/api/v1/push"
+    url = "http://loki.mon.home-local.site/loki/api/v1/push"
     batch_size = "1MiB"
     batch_wait = "2s"
   }
@@ -42,6 +42,7 @@ prometheus.relabel "docker_relabel" {
   
   forward_to = [prometheus.remote_write.prometheus.receiver]
 }
+
 
 // System metrics
 prometheus.exporter.unix "metrics" {
@@ -80,7 +81,7 @@ prometheus.relabel "metrics" {
 
   rule {
     target_label = "job"
-    replacement = string.format("%s-metrics", constants.hostname)
+    replacement = "linux-node"
   }
   
   forward_to = [prometheus.remote_write.prometheus.receiver]
@@ -109,16 +110,13 @@ loki.source.journal "journal" {
   forward_to = [loki.write.loki.receiver]
   path          = "/var/log/journal"
   relabel_rules = loki.relabel.journal.rules
-  labels = {
-    component = string.format("%s-journal", constants.hostname),
-  }
 }
 
 loki.relabel "journal" {
   forward_to = []
   rule {
     source_labels = ["__journal__systemd_unit"]
-    regex         = "^(docker|containerd|kubelet|nginx|postgresql|sshd|fail2ban|node_exporter)\\.service$"
+    regex         = "^(docker|containerd|kubelet|nginx|postgresql|sshd|fail2ban|alloy)\\.service$"
     action        = "keep"
   }
 
@@ -134,6 +132,14 @@ loki.relabel "journal" {
     source_labels = ["__journal__transport"]
     target_label  = "transport"
   }
+  rule {
+    target_label = "instance"
+    replacement  = constants.hostname
+  }
+  rule {
+    target_label = "job"
+    replacement  = "systemd-journal"
+  }
 }
 
 loki.source.file "system" {
@@ -148,48 +154,63 @@ local.file_match "system" {
       __path__    = "/var/log/messages",
       job         = "system-logs",
       log_type    = "messages",
+      instance    = constants.hostname,
     },
     {
       __address__ = "localhost",
       __path__    = "/var/log/secure",
       job         = "system-logs",
       log_type    = "secure",
+      instance    = constants.hostname,
     },
     {
       __address__ = "localhost",
       __path__    = "/var/log/cron",
       job         = "system-logs",
       log_type    = "cron",
+      instance    = constants.hostname,
     },
     {
       __address__ = "localhost",
       __path__    = "/var/log/boot.log",
       job         = "system-logs",
       log_type    = "boot",
-    },
-    {
-      __address__ = "localhost",
-      __path__    = "/var/log/dnf*.log*",
-      job         = "system-logs",
-      log_type    = "dnf",
-    },
-    {
-      __address__ = "localhost",
-      __path__    = "/var/log/nginx/*.log",
-      job         = "nginx",
-      log_type    = "nginx",
+      instance    = constants.hostname,
     },
     {
       __address__ = "localhost",
       __path__    = "/var/log/auth.log",
       job         = "system-logs",
       log_type    = "auth",
+      instance    = constants.hostname,
     },
     {
       __address__ = "localhost",
       __path__    = "/var/log/syslog",
       job         = "system-logs",
       log_type    = "syslog",
+      instance    = constants.hostname,
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/fail2ban.log",
+      job         = "system-logs",
+      log_type    = "fail2ban",
+      instance    = constants.hostname,
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/nginx/access.log",
+      job         = "system-logs",
+      log_type    = "nginx",
+      instance    = constants.hostname,
+    },
+    {
+      __address__ = "localhost",
+      __path__    = "/var/log/dnf.log",
+      job         = "system-logs",
+      log_type    = "dnf",
+      instance    = constants.hostname,
     },
   ]
 }
