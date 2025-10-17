@@ -1,0 +1,23 @@
+[Unit]
+Description=Jenkins Agent
+After=network.target
+
+[Service]
+Type=simple
+User=vlad
+WorkingDirectory=/home/vlad/jenkins-agent
+ExecStart=/usr/bin/java -jar /usr/local/bin/agent.jar \
+  -url http://localhost:8080 \
+  -webSocket \
+  -noCertificateCheck \
+  -secret 4b9667e12656b4776a34c3c8327fb36a5aa3fd89fb871761867d26687c77f7d7 \
+  -name agent-1 \
+  -workDir /home/vlad/jenkins-agent
+Restart=always
+RestartSec=10
+Environment=JAVA_OPTS=-Djava.awt.headless=true
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

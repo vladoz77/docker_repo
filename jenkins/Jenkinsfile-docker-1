@@ -1,0 +1,38 @@
+pipeline {
+    agent any
+    environment {
+        REGISTRY = "reg.yc.home-local.site"
+        IMAGE_NAME = "busybox"
+        IMAGE_TAG = "latest"
+        NEW_IMAGE_TAG = "${BUILD_NUMBER}.${BUILD_ID}"
+    } 
+    stages {
+        stage ('pull image'){
+            steps {
+                script{
+                    sh"""
+                    docker pull ${IMAGE_NAME}:${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+        stage ('tag image'){
+            steps {
+                script{
+                    sh"""
+                    docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${REGISTRY}/${IMAGE_NAME}:${NEW_IMAGE_TAG}
+                    """
+                }
+            }
+        }
+        stage ('docker push to nexus'){
+            steps {
+                withDockerRegistry(credentialsId: 'nexus-token', url: "https://${REGISTRY}") {
+                    sh """
+                    docker push ${REGISTRY}/${IMAGE_NAME}:${NEW_IMAGE_TAG}
+                    """
+                }
+            }
+        }
+    }
+}

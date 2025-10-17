@@ -13,10 +13,11 @@ sudo apt install openjdk-17-jre jq -y
 Для автоматизации получения секрета агента, сначала получим API-токен.
 
 ```bash
+JENKINS_URL=jenkins.yc.home-local.site
 # Получаем XML целиком
 RESPONSE=$(curl -k -s \
   -u "admin:admin" \
-  "https://jenkins.yc.home-local.site/crumbIssuer/api/xml" \
+  "https://${JENKINS_URL}/crumbIssuer/api/json" \
   -c cookies.txt)
 
 # Извлекаем нужные части
@@ -37,7 +38,7 @@ API_TOKEN=$(curl -k -s \
   -b cookies.txt \
   -H "$CRUMB" \
   --data "newTokenName=automation-token" \
-  "https://jenkins.yc.home-local.site/user/admin/descriptorByName/jenkins.security.ApiTokenProperty/generateNewToken" \
+  "https://${JENKINS_URL}/user/admin/descriptorByName/jenkins.security.ApiTokenProperty/generateNewToken" \
   | jq -r '.data.tokenValue')
 ```
 >✅ Токен будет использован для последующих API-запросов. 
@@ -94,7 +95,6 @@ java -jar agent.jar \
   -secret ${SECRET} \
   -name "agent-1" \
   -workDir "/home/ubuntu/jenkins-agent"
-  
 ```
 Вывод:
 
