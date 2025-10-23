@@ -21,8 +21,8 @@ RESPONSE=$(curl -k -s \
   -c cookies.txt)
 
 # Извлекаем нужные части
-CRUMB_FIELD=$(echo "$RESPONSE" | grep -oP '<crumbRequestField>\K[^<]+')
-CRUMB_VALUE=$(echo "$RESPONSE" | grep -oP '<crumb>\K[^<]+')
+CRUMB_FIELD=$(echo "$RESPONSE" | jq -r '.crumbRequestField')
+CRUMB_VALUE=$(echo "$RESPONSE" | jq -r '.crumb')
 
 # Формируем заголовок
 CRUMB="${CRUMB_FIELD}:${CRUMB_VALUE}"
