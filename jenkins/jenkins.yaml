@@ -1,22 +1,22 @@
 unclassified:
   location:
-    url: https://jenkins.yc.home-local.site
+    url: http://localhost:8080
 
 jenkins:
   numExecutors: 0
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin"
   securityRealm:
     local:
-      allowsSignup: false
+      allowsSignup: true
       users:
       - id: "admin"
         password: "admin"
 
   nodes:
   - permanent:
-      name: "agent-1"
-      labelString: "linux docker build"
-      remoteFS: "/home/ubuntu/jenkins-agent"
+      name: "wsl-agent"
+      labelString: "wsl-agent"
+      remoteFS: "/home/vlad/jenkins-agent"
       numExecutors: 2
       launcher:
         inbound:
@@ -45,3 +45,11 @@ tool:
           installers:
           - adoptOpenJdkInstaller:
               id: "jdk-11.0.14+9"
+  terraform:
+    installations:
+    - name: "terraform_1.13.4"
+      properties:
+      - installSource:
+          installers:
+          - zip:
+              url: "https://hashicorp-releases.yandexcloud.net/terraform/1.13.4/terraform_1.13.4_linux_amd64.zip"

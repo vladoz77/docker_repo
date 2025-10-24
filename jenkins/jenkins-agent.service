@@ -10,7 +10,7 @@ ExecStart=/usr/bin/java -jar /usr/local/bin/agent.jar \
   -url http://localhost:8080 \
   -webSocket \
   -noCertificateCheck \
-  -secret 4b9667e12656b4776a34c3c8327fb36a5aa3fd89fb871761867d26687c77f7d7 \
+  -secret 53a1f2925acf52db457635094682aae71029d52bd2bb298469ae41119065cc50 \
   -name agent-1 \
   -workDir /home/vlad/jenkins-agent
 Restart=always

@@ -19,3 +19,4 @@ timestamper:latest
 workflow-aggregator:latest
 ws-cleanup:latest
 adoptopenjdk:latest
+terraform:latest

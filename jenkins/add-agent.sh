@@ -4,7 +4,7 @@ set -euo pipefail
 
 # === Настройки ===
 JENKINS_URL="http://localhost:8080"
-AGENT_NAME="agent-1"
+AGENT_NAME="wsl-agent"
 JENKINS_USER="admin"
 JENKINS_PASS="admin"          
 AGENT_USER="vlad"
