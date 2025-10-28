@@ -3,14 +3,30 @@
 set -euo pipefail
 
 # === Настройки ===
-JENKINS_URL="http://localhost:8080"
-AGENT_NAME="wsl-agent"
+JENKINS_URL="http://10.84.62.136:8080"
+AGENT_NAME="lxc-jenkins-agent"
 JENKINS_USER="admin"
 JENKINS_PASS="admin"          
 AGENT_USER="vlad"
 AGENT_HOME="/home/${AGENT_USER}/jenkins-agent"
 AGENT_JAR_PATH="${AGENT_HOME}/agent.jar" 
 SYSTEMD_UNIT_PATH="/etc/systemd/system/jenkins-agent.service"
+
+# === Установка Java (если не установлена) ===
+if ! command -v java &> /dev/null; then
+    echo "Java не найдена. Устанавливаем OpenJDK 17..."
+    if command -v dnf &> /dev/null; then
+        dnf install -y java-17-openjdk-headless
+    elif command -v apt &> /dev/null; then
+        apt update
+        apt install -y openjdk-17-jre-headless
+    else
+        echo "❌ Неизвестный пакетный менеджер. Установите Java вручную."
+        exit 1
+    fi
+else
+    echo "✅ Java уже установлена: $(java -version 2>&1 | head -1)"
+fi
 
 # === 0. Создаём рабочую директорию, если не существует ===
 echo "Создаём рабочую директорию: ${AGENT_HOME}"

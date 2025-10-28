@@ -14,8 +14,8 @@ jenkins:
 
   nodes:
   - permanent:
-      name: "wsl-agent"
-      labelString: "wsl-agent"
+      name: "lxc-jenkins-agent"
+      labelString: "lxc-jenkins-agent"
       remoteFS: "/home/vlad/jenkins-agent"
       numExecutors: 2
       launcher:
