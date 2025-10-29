@@ -1,6 +1,25 @@
 services:
+  setup:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    container_name: setup_es
+    environment:
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - KIBANA_PASSWORD=${KIBANA_PASSWORD}
+    volumes:
+     - ./certs:/usr/share/elasticsearch/config/certs
+     - ./config/init-users.sh:/usr/share/elasticsearch/config/init-users.sh
+    command: ["/bin/sh", "/usr/share/elasticsearch/config/init-users.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /usr/share/elasticsearch/config/init-users.sh ]"]
+      interval: 1s
+      timeout: 5s
+      retries: 120
+    networks:
+      es-net:
+
   es01:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    container_name: es01
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
       # - ./config/elasticsearch.yaml:/usr/share/elasticsearch/config/elasticsearch.yml
@@ -42,11 +61,14 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+    networks:
+      es-net:
 
   es02:
     depends_on:
       - es01
     image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    container_name: es02
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
       # - ./config/elasticsearch.yaml:/usr/share/elasticsearch/config/elasticsearch.yml
@@ -81,16 +103,19 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl -s --cacert config/ca/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
+          "curl -s --cacert config/certs/ca.crt https://localhost:9200 | grep -q 'missing authentication credentials'",
         ]
       interval: 10s
       timeout: 10s
       retries: 120
+    networks:
+      es-net:
 
   es03:
     depends_on:
       - es02
     image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    container_name: es03
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
       # - ./config/elasticsearch.yaml:/usr/share/elasticsearch/config/elasticsearch.yml
@@ -130,6 +155,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+    networks:
+      es-net:
 
   kibana:
     depends_on:
@@ -140,6 +167,7 @@ services:
       es03:
         condition: service_healthy
     image: docker.elastic.co/kibana/kibana:9.2.0
+    container_name: kibana
     volumes:
       - ./certs:/usr/share/kibana/config/certs
       - kibanadata:/usr/share/kibana/data
@@ -161,9 +189,14 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+    networks:
+      es-net:
 
 volumes:
   esdata01:
   esdata02:
   esdata03:
   kibanadata:
+
+networks:
+  es-net:
