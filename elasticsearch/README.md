@@ -1,5 +1,3 @@
-# Установка Elasticsearch HA Cluster + Kibana в Docker
-
 ### Структура проекта
 
 ```bash
@@ -68,7 +66,7 @@ ST = Russia
 L = Ryazan
 O = Home-Lab
 OU = IT
-CN = *.cluster.local
+CN = es.cluster.local
 
 [v3_req]
 keyUsage = keyEncipherment, dataEncipherment, digitalSignature
@@ -550,3 +548,170 @@ CONTAINER ID   NAME      CPU %     MEM USAGE / LIMIT   MEM %     NET I/O        
 
 ```
 
+
+### Настройка реверс-прокси `traefik` для доступа к `kibana`
+
+Создадим самоподписываемые сертификаты для зоны `*.home.local.`
+
+```bash
+mkdir -p certs
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout certs/local.key -out certs/local.crt \
+  -subj "/CN=*.home.local"
+```
+
+Создадим файл с конфигурацией  `tls.yaml`
+
+```yaml
+mkdir -p dynamic
+cat > dynamic/tls.yml << EOF
+tls:
+  certificates:
+    - certFile: /certs/local.crt
+      keyFile: /certs/local.key
+EOF
+```
+
+Создадим пароль для дашборда
+
+```bash
+htpasswd -nb admin "P@ssw0rd" | sed -e 's/\$/\$\$/g'
+```
+
+Создадим `docker-compose.yaml`с конфигурацией траефика
+
+```bash
+services:
+  traefik:
+    image: traefik:v3.4
+    container_name: traefik
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+    networks:
+     # Connect to the 'traefik_proxy' overlay network for inter-container communication across nodes
+      - proxy
+
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8082:8082"
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/certs:ro
+      - ./config:/config:ro
+
+    command:
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--metrics.prometheus.entrypoint=metrics"
+      
+
+      # Attach the static configuration tls.yaml file that contains the tls configuration settings
+      - "--providers.file.filename=/config/tls.yaml"
+
+      # Providers 
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=proxy"
+
+      # API & Dashboard 
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+
+      # Observability 
+      - "--log.level=INFO"
+      - "--accesslog=true"
+      - "--metrics.prometheus=true"
+      - "--entrypoints.metrics.address=:8082"
+      
+
+  # Traefik Dynamic configuration via Docker labels
+    labels:
+      # Enable self‑routing
+      - "traefik.enable=true"
+
+      # Dashboard router
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.home.local`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls=true"
+
+      # Basic‑auth middleware
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$9Bf7fi7r$$4SZtA20rXAYDxGWvP8jFM0"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
+
+networks:
+  proxy:
+    name: proxy
+```
+
+Изменим конфигурацию `kibana` в docker-compose
+
+```yaml
+# ... существующие сервисы Elasticsearch
+--- 
+kibana:
+    depends_on:
+      es01:
+        condition: service_healthy
+      es02:
+        condition: service_healthy
+      es03:
+        condition: service_healthy
+    image: docker.elastic.co/kibana/kibana:9.2.0
+    container_name: kibana
+    volumes:
+      - ./certs:/usr/share/kibana/config/certs
+      - kibanadata:/usr/share/kibana/data
+    ports:
+      - 5601:5601
+    environment:
+      - SERVERNAME=kibana
+      - SERVER_HOST=0.0.0.0
+      - ELASTICSEARCH_HOSTS=https://es01:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca.crt
+    mem_limit: ${MEM_LIMIT}
+    labels:
+    # Добавим настройки траефика
+      - "traefik.enable=true"
+      - "traefik.http.routers.kibana.rule=Host(`kibana.home.local`)"
+      - "traefik.http.routers.kibana.entrypoints=websecure"
+      - "traefik.http.routers.kibana.tls=true"
+      - "traefik.http.services.kibana.loadbalancer.server.port=5601"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+    networks:
+      es-net:
+      proxy: # ← Добавим сеть траефик
+```
+
+Так же в файл `/etc/hosts` нужно добавить имена хостов (На продакшене добавляем в днс серевер)
+
+```bash
+10.84.62.52 traefik.home.local kibana.home.local
+```
+
+Запустим все наши сервисы командой
+
+```bash
+docker compose up -d
+```
+
+Проверить можно зайдя в браузер и набрать `https://kibana.home.local`
