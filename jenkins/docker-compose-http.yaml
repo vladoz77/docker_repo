@@ -1,0 +1,28 @@
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jenkins
+    privileged: true
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.jenkins.rule=Host(`jenkins.home.local`)"
+      - "traefik.http.routers.jenkins.entrypoints=web"
+      - "traefik.http.services.jenkins.loadbalancer.server.port=8080"
+    volumes:
+      - jenkins-data:/var/jenkins_home:rw
+    ports:
+      - 2376:2376
+      - 8080:8080
+      - 50000:50000
+    networks:
+      proxy:
+
+volumes:
+ jenkins-data:
+
+networks:
+  proxy:
+    external: true

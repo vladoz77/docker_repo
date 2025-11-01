@@ -1,6 +1,6 @@
 unclassified:
   location:
-    url: http://localhost:8080
+    url: http://jenkins.home.local
 
 jenkins:
   numExecutors: 0
