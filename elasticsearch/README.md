@@ -68,7 +68,7 @@ ST = Russia
 L = Ryazan
 O = Home-Lab
 OU = IT
-CN = es.home.local
+CN = *.cluster.local
 
 [v3_req]
 keyUsage = keyEncipherment, dataEncipherment, digitalSignature
@@ -77,14 +77,14 @@ subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = localhost
-DNS.2 = es.home.local
+DNS.2 = es.cluster.local
 DNS.3 = es
 DNS.4 = es01
 DNS.5 = es02
 DNS.6 = es03
-DNS.7 = es01.home.local
-DNS.8 = es02.home.local
-DNS.9 = es03.home.local
+DNS.7 = es01.cluster.local
+DNS.8 = es02.cluster.local
+DNS.9 = es03.cluster.local
 DNS.10 = es-service
 IP.1 = 127.0.0.1
 EOF

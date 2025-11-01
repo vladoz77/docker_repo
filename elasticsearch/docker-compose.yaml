@@ -175,11 +175,18 @@ services:
       - 5601:5601
     environment:
       - SERVERNAME=kibana
+      - SERVER_HOST=0.0.0.0
       - ELASTICSEARCH_HOSTS=https://es01:9200
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
       - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca.crt
     mem_limit: ${MEM_LIMIT}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kibana.rule=Host(`kibana.home.local`)"
+      - "traefik.http.routers.kibana.entrypoints=websecure"
+      - "traefik.http.routers.kibana.tls=true"
+      - "traefik.http.services.kibana.loadbalancer.server.port=5601"
     healthcheck:
       test:
         [
@@ -191,6 +198,7 @@ services:
       retries: 120
     networks:
       es-net:
+      proxy:
 
 volumes:
   esdata01:
@@ -200,3 +208,5 @@ volumes:
 
 networks:
   es-net:
+  proxy:
+    external: true
