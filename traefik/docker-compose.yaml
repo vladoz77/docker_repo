@@ -32,7 +32,7 @@ services:
       
 
       # Attach the static configuration tls.yaml file that contains the tls configuration settings
-      - "--providers.file.filename=/config/tls.yaml"
+      - "--providers.file.filename=/config/config.yaml"
 
       # Providers 
       - "--providers.docker=true"
