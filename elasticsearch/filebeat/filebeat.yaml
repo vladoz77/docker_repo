@@ -1,0 +1,40 @@
+filebeat.inputs:
+- type: filestream
+  id: logs-1
+  paths:
+    - /var/log/*.log
+    - /var/log/messages*
+    - /var/log/secure*
+    - /var/log/cron*
+    - /var/log/boot.log*
+    - /var/log/maillog*
+    - /var/log/spooler*
+  index: "filebeat-logs"
+  seek: since
+  since: -24h
+
+- type: filestream
+  id: logs-2
+  paths:
+    - /var/log/*.log
+    - /var/log/messages*
+    - /var/log/secure*
+    - /var/log/cron*
+    - /var/log/boot.log*
+    - /var/log/maillog*
+    - /var/log/spooler*
+  index: "logs-%{+yyyy.MM.dd}"
+  seek: since
+  since: -24h
+
+
+processors:
+  - drop_fields:
+      fields: ["agent", "log.file.device_id", "log.file.inode", "log.file.fingerprint", "log.offset", "input", "ecs"]
+
+output.elasticsearch:
+ hosts: ["https://es01:9200"]
+ username: elastic
+ password: password
+ ssl.enabled: true
+ ssl.certificate_authorities: "/usr/share/filebeat/certs/ca.crt"

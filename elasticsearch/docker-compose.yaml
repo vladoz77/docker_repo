@@ -1,13 +1,14 @@
 services:
   setup:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    image: elasticsearch:9.2.0
     container_name: setup_es
+    restart: unless-stopped
     environment:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - KIBANA_PASSWORD=${KIBANA_PASSWORD}
     volumes:
      - ./certs:/usr/share/elasticsearch/config/certs
-     - ./config/init-users.sh:/usr/share/elasticsearch/config/init-users.sh
+     - ./elasticsearch/init-users.sh:/usr/share/elasticsearch/config/init-users.sh
     command: ["/bin/sh", "/usr/share/elasticsearch/config/init-users.sh"]
     healthcheck:
       test: ["CMD-SHELL", "[ -f /usr/share/elasticsearch/config/init-users.sh ]"]
@@ -18,11 +19,11 @@ services:
       es-net:
 
   es01:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    image: elasticsearch:9.2.0
     container_name: es01
+    restart: unless-stopped
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
-      # - ./config/elasticsearch.yaml:/usr/share/elasticsearch/config/elasticsearch.yml
       - esdata01:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
@@ -67,11 +68,11 @@ services:
   es02:
     depends_on:
       - es01
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    image: elasticsearch:9.2.0
     container_name: es02
+    restart: unless-stopped
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
-      # - ./config/elasticsearch.yaml:/usr/share/elasticsearch/config/elasticsearch.yml
       - esdata02:/usr/share/elasticsearch/data
     environment:
       - node.name=es02
@@ -114,11 +115,11 @@ services:
   es03:
     depends_on:
       - es02
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.0
+    image: elasticsearch:9.2.0
     container_name: es03
+    restart: unless-stopped
     volumes:
       - ./certs:/usr/share/elasticsearch/config/certs
-      # - ./config/elasticsearch.yaml:/usr/share/elasticsearch/config/elasticsearch.yml
       - esdata03:/usr/share/elasticsearch/data
     environment:
       - node.name=es03
@@ -158,6 +159,34 @@ services:
     networks:
       es-net:
 
+
+  vector:
+    depends_on:
+      es01:
+        condition: service_healthy
+      es02:
+        condition: service_healthy
+      es03:
+        condition: service_healthy
+    image: timberio/vector:0.51.1-debian
+    container_name: vector
+    command: ["--config", "/etc/vector/vector.yaml"]
+    restart: unless-stopped
+    privileged: true
+    user: root
+    volumes:
+      - ./certs/:/var/lib/vector/certs/:ro
+      - /var/log/journal:/var/log/journal:ro
+      - /run/log/journal:/run/log/journal:ro
+      - /etc/machine-id:/etc/machine-id:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - vector_data:/var/lib/vector
+      - ./vector/vector.yaml:/etc/vector/vector.yaml:ro
+    networks:
+      - es-net
+
+      
   kibana:
     depends_on:
       es01:
@@ -166,8 +195,9 @@ services:
         condition: service_healthy
       es03:
         condition: service_healthy
-    image: docker.elastic.co/kibana/kibana:9.2.0
+    image: kibana:9.2.0
     container_name: kibana
+    restart: unless-stopped
     volumes:
       - ./certs:/usr/share/kibana/config/certs
       - kibanadata:/usr/share/kibana/data
@@ -205,6 +235,8 @@ volumes:
   esdata02:
   esdata03:
   kibanadata:
+  filebeatdata01:
+  vector_data:
 
 networks:
   es-net:

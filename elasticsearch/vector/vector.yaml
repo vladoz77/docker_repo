@@ -1,0 +1,106 @@
+# Set global options
+data_dir: "/var/lib/vector"
+
+api:
+  enabled: false
+
+sources:
+  journald_logs:
+    type: journald
+  docker_logs:
+    type: docker_logs
+    include_containers:
+      - "es01"
+      - "es02"
+      - "es03"
+      - "kibana"
+      - "traefik"
+
+
+transforms:
+  journald_transform:
+    inputs:
+      - "journald_logs"
+    type: remap
+    source: |
+      . = {
+        "@timestamp": now(),
+        "hostname": ._HOSTNAME,
+        "service_name": ._SYSTEMD_UNIT,
+        "pid": ._PID,
+        "message": .message,
+        "level": to_int(.PRIORITY) ?? "6",
+        "source": "journald"
+      }
+
+  docker_transform:
+    inputs:
+      - "docker_logs"
+    type: remap
+    source: |
+      . = {
+        "@timestamp": now(),
+        "container_id": .container_id,
+        "container_name": .container_name,
+        "image": .image,
+        "source": "docker",
+        "original_message": .message  
+      }
+      
+      # Попытка распарсить JSON
+      parsed, err = parse_json(.original_message)
+
+      if err == null {
+        ., err = merge(., parsed)
+        .log_type = "json"
+        del(.original_message)
+        del(.message)
+      } else {
+        .message = .original_message
+        .log_type = "plain"
+        del(.original_message)
+      }
+      
+sinks:
+  journald_sink:
+    inputs:
+      - "journald_transform"   
+    type: "elasticsearch"
+    endpoints:
+      - "https://es01:9200"
+    bulk:
+      action: index
+      index: "vector-journald-%Y-%m-%d" 
+    tls:
+      ca_file: /var/lib/vector/certs/ca.crt
+    auth:
+      strategy: basic
+      user: kovalev.v
+      password: "password"
+    api_version: auto
+    compression: gzip
+    batch:
+      max_bytes: 1000000
+      timeout_secs: 5
+
+  docker_sink:
+    inputs:
+      - "docker_transform"
+    type: "elasticsearch"
+    endpoints:
+      - "https://es01:9200"
+    bulk:
+      action: index
+      index: "vector-docker-%Y-%m-%d" 
+    tls:
+      ca_file: /var/lib/vector/certs/ca.crt
+    auth:
+      strategy: basic
+      user: kovalev.v
+      password: "password"
+    api_version: auto
+    compression: gzip
+    batch:
+      max_bytes: 1000000
+      timeout_secs: 5
+
