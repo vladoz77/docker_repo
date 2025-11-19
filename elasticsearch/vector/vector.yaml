@@ -26,7 +26,7 @@ transforms:
       . = {
         "@timestamp": now(),
         "hostname": ._HOSTNAME,
-        "service_name": ._SYSTEMD_UNIT,
+        "unit": ._SYSTEMD_UNIT,
         "pid": ._PID,
         "message": .message,
         "level": to_int(.PRIORITY) ?? "6",
@@ -53,6 +53,7 @@ transforms:
       if err == null {
         ., err = merge(., parsed)
         .log_type = "json"
+        .level = to_int(.level) ?? "6"
         del(.original_message)
         del(.message)
       } else {
