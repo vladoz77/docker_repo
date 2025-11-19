@@ -28,9 +28,29 @@ transforms:
         "unit": ._SYSTEMD_UNIT,
         "pid": ._PID,
         "message": .message,
-        "level": to_int(.PRIORITY) ?? "6",
         "source": "journald"
       }
+
+      .level = if .PRIORITY == 0 {
+          "emergency"
+      } else if .PRIORITY == 1 {
+          "alert"
+      } else if .PRIORITY == 2 {
+          "critical"
+      } else if .PRIORITY == 3 {
+          "error"
+      } else if .PRIORITY == 4 {
+          "warning"
+      } else if .PRIORITY == 5 {
+          "notice"
+      } else if .PRIORITY == 6 {
+          "info"
+      } else if .PRIORITY == 7 {
+          "debug"
+      } else {
+          "info"
+      }
+
 
   docker_transform:
     inputs:
@@ -46,19 +66,37 @@ transforms:
         "original_message": .message  
       }
 
-      # Попытка распарсить JSON
       parsed, err = parse_json(.original_message)
-
       if err == null {
         .log_parsed = parsed
         .log_type = "json"
-        .level = parsed.level ?? .level
         del(.original_message)
         del(.message)
       } else {
         .message = .original_message
         .log_type = "plain"
         del(.original_message)
+      }
+
+  traefik_parser:
+    inputs:
+    - "docker_transform"
+    type: remap
+    source: |
+      if .container_name == "traefik"{
+        parsed = .log_parsed
+        .level = parsed.level
+      }
+  
+  elasticsearch_parser:
+    inputs:
+      - "docker_transform"
+    type: remap
+    source: |
+      if .container_name == "es02"{
+        parsed = .log_parsed
+
+        .level = parsed.log.level 
       }
 
 sinks:
@@ -86,6 +124,8 @@ sinks:
   docker_sink:
     inputs:
     - "docker_transform"
+    - "traefik_parser"
+    - "elasticsearch_parser"
     type: "elasticsearch"
     endpoints:
     - "https://es01:9200"

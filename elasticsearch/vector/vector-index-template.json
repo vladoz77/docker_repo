@@ -23,6 +23,7 @@
         "pid": { "type": "keyword" },
         "container_id": { "type": "keyword" },
         "container_name": { "type": "keyword" },
+        "image": {  "type": "keyword"},
         "source": { "type": "keyword" },
         "log_type": { "type": "keyword" },
         "log_parsed": { 
