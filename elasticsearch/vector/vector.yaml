@@ -10,17 +10,16 @@ sources:
   docker_logs:
     type: docker_logs
     include_containers:
-      - "es01"
-      - "es02"
-      - "es03"
-      - "kibana"
-      - "traefik"
-
+    - "es01"
+    - "es02"
+    - "es03"
+    - "kibana"
+    - "traefik"
 
 transforms:
   journald_transform:
     inputs:
-      - "journald_logs"
+    - "journald_logs"
     type: remap
     source: |
       . = {
@@ -35,7 +34,7 @@ transforms:
 
   docker_transform:
     inputs:
-      - "docker_logs"
+    - "docker_logs"
     type: remap
     source: |
       . = {
@@ -46,14 +45,14 @@ transforms:
         "source": "docker",
         "original_message": .message  
       }
-      
+
       # Попытка распарсить JSON
       parsed, err = parse_json(.original_message)
 
       if err == null {
-        ., err = merge(., parsed)
+        .log_parsed = parsed
         .log_type = "json"
-        .level = to_int(.level) ?? "6"
+        .level = parsed.level ?? .level
         del(.original_message)
         del(.message)
       } else {
@@ -61,17 +60,17 @@ transforms:
         .log_type = "plain"
         del(.original_message)
       }
-      
+
 sinks:
   journald_sink:
     inputs:
-      - "journald_transform"   
+    - "journald_transform"
     type: "elasticsearch"
     endpoints:
-      - "https://es01:9200"
+    - "https://es01:9200"
     bulk:
       action: index
-      index: "vector-journald-%Y-%m-%d" 
+      index: "vector-journald-%Y-%m-%d"
     tls:
       ca_file: /var/lib/vector/certs/ca.crt
     auth:
@@ -86,13 +85,13 @@ sinks:
 
   docker_sink:
     inputs:
-      - "docker_transform"
+    - "docker_transform"
     type: "elasticsearch"
     endpoints:
-      - "https://es01:9200"
+    - "https://es01:9200"
     bulk:
       action: index
-      index: "vector-docker-%Y-%m-%d" 
+      index: "vector-docker-%Y-%m-%d"
     tls:
       ca_file: /var/lib/vector/certs/ca.crt
     auth:
@@ -104,4 +103,3 @@ sinks:
     batch:
       max_bytes: 1000000
       timeout_secs: 5
-

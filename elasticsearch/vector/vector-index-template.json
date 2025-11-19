@@ -1,0 +1,35 @@
+{
+  "index_patterns": ["vector-journald-*", "vector-docker-*"],
+  "priority": 200,
+  "template": {
+    "settings": {
+      "index": {
+        "number_of_shards": 6,
+        "number_of_replicas": 1,
+        "refresh_interval": "30s"
+      }
+    },
+    "mappings": {
+      "dynamic": "strict",       
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "message": {
+          "type": "text",
+          "fields": { "keyword": { "type": "keyword" } }
+        },
+        "level": { "type": "keyword" },
+        "hostname": { "type": "keyword" },
+        "unit": { "type": "keyword" },
+        "pid": { "type": "keyword" },
+        "container_id": { "type": "keyword" },
+        "container_name": { "type": "keyword" },
+        "source": { "type": "keyword" },
+        "log_type": { "type": "keyword" },
+        "log_parsed": { 
+            "type": "object",
+            "enabled": false   
+        }
+      }
+    }
+  }
+}
