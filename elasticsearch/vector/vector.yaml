@@ -9,12 +9,6 @@ sources:
     type: journald
   docker_logs:
     type: docker_logs
-    include_containers:
-    - "es01"
-    - "es02"
-    - "es03"
-    - "kibana"
-    - "traefik"
 
 transforms:
   journald_transform:
@@ -78,26 +72,25 @@ transforms:
         del(.original_message)
       }
 
-  traefik_parser:
-    inputs:
-    - "docker_transform"
-    type: remap
-    source: |
-      if .container_name == "traefik"{
-        parsed = .log_parsed
-        .level = parsed.level
+      # Traefik
+      if .container_name == "traefik"  {
+        .level = .log_parsed.level
+        .http_method = .log_parsed.RequestMethod
+        .http_status, err = to_int(.log_parsed.OriginStatus)
+        .http_path = .log_parsed.RequestPath
+        .http_host = .log_parsed.RequestHost
+        .client_ip = .log_parsed.ClientHost
+        .response_time_ms = to_float(.log_parsed.Duration) / 1000000.0
+        .http_scheme = .log_parsed.RequestScheme
+      }
+
+      # Elasticsearch
+      if starts_with(string!(.container_name), "es") {
+        .level = downcase(string!(.log_parsed."log.level"))
+        .cluster_name = .log_parsed."elasticsearch.cluster.name"
+        .node_name = .log_parsed."elasticsearch.node.name"
       }
   
-  elasticsearch_parser:
-    inputs:
-      - "docker_transform"
-    type: remap
-    source: |
-      if .container_name == "es02"{
-        parsed = .log_parsed
-
-        .level = parsed.log.level 
-      }
 
 sinks:
   journald_sink:
@@ -124,14 +117,12 @@ sinks:
   docker_sink:
     inputs:
     - "docker_transform"
-    - "traefik_parser"
-    - "elasticsearch_parser"
     type: "elasticsearch"
     endpoints:
     - "https://es01:9200"
     bulk:
       action: index
-      index: "vector-docker-%Y-%m-%d"
+      index: "vector-docker-v3-%Y-%m-%d"
     tls:
       ca_file: /var/lib/vector/certs/ca.crt
     auth:
@@ -139,6 +130,7 @@ sinks:
       user: kovalev.v
       password: "password"
     api_version: auto
+    pipeline: vector-mask-ip
     compression: gzip
     batch:
       max_bytes: 1000000

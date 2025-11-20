@@ -10,7 +10,10 @@
       }
     },
     "mappings": {
-      "dynamic": "strict",       
+      "dynamic": "strict",
+      "_source": {
+        "excludes": ["log_parsed"]
+      },       
       "properties": {
         "@timestamp": { "type": "date" },
         "message": {
@@ -26,6 +29,16 @@
         "image": {  "type": "keyword"},
         "source": { "type": "keyword" },
         "log_type": { "type": "keyword" },
+        "cluster_name": { "type": "keyword" },
+        "node_name": { "type": "keyword" },
+        "http_method": { "type": "keyword" },
+        "http_status": { "type": "integer" },
+        "http_path": { "type": "keyword" },
+        "http_host": { "type": "keyword" },
+        "http_scheme" : { "type": "keyword" },
+        "client_ip": { "type": "keyword" },
+        "response_time_ms": { "type": "float" },
+
         "log_parsed": { 
             "type": "object",
             "enabled": false   
