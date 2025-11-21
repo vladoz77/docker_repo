@@ -82,6 +82,7 @@ transforms:
         .client_ip = .log_parsed.ClientHost
         .response_time_ms = to_float(.log_parsed.Duration) / 1000000.0
         .http_scheme = .log_parsed.RequestScheme
+        .full_url, err = .http_scheme + "://" + .http_host + .http_path
       }
 
       # Elasticsearch
@@ -122,7 +123,7 @@ sinks:
     - "https://es01:9200"
     bulk:
       action: index
-      index: "vector-docker-v3-%Y-%m-%d"
+      index: "vector-docker-v4-%Y-%m-%d"
     tls:
       ca_file: /var/lib/vector/certs/ca.crt
     auth:

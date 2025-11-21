@@ -38,6 +38,7 @@
         "http_scheme" : { "type": "keyword" },
         "client_ip": { "type": "keyword" },
         "response_time_ms": { "type": "float" },
+        "full_url": {"type": "keyword"},
 
         "log_parsed": { 
             "type": "object",
