@@ -1,0 +1,13 @@
+{
+  "description": "Mask ip address in client_ip field",
+  "processors": [
+    {
+      "gsub": {
+        "field": "client_ip",
+        "pattern": "(\\d+\\.\\d+)\\.\\d+\\.\\d+",
+        "replacement": "$1.*.*",
+        "if": "ctx.client_ip != null"
+      }
+    }
+  ]
+}

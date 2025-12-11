@@ -9,12 +9,6 @@ sources:
     type: journald
   docker_logs:
     type: docker_logs
-    include_containers:
-    - "es01"
-    - "es02"
-    - "es03"
-    - "kibana"
-    - "traefik"
 
 transforms:
   journald_transform:
@@ -28,9 +22,29 @@ transforms:
         "unit": ._SYSTEMD_UNIT,
         "pid": ._PID,
         "message": .message,
-        "level": to_int(.PRIORITY) ?? "6",
         "source": "journald"
       }
+
+      .level = if .PRIORITY == 0 {
+          "emergency"
+      } else if .PRIORITY == 1 {
+          "alert"
+      } else if .PRIORITY == 2 {
+          "critical"
+      } else if .PRIORITY == 3 {
+          "error"
+      } else if .PRIORITY == 4 {
+          "warning"
+      } else if .PRIORITY == 5 {
+          "notice"
+      } else if .PRIORITY == 6 {
+          "info"
+      } else if .PRIORITY == 7 {
+          "debug"
+      } else {
+          "info"
+      }
+
 
   docker_transform:
     inputs:
@@ -46,13 +60,10 @@ transforms:
         "original_message": .message  
       }
 
-      # Попытка распарсить JSON
       parsed, err = parse_json(.original_message)
-
       if err == null {
         .log_parsed = parsed
         .log_type = "json"
-        .level = parsed.level ?? .level
         del(.original_message)
         del(.message)
       } else {
@@ -60,6 +71,27 @@ transforms:
         .log_type = "plain"
         del(.original_message)
       }
+
+      # Traefik
+      if .container_name == "traefik"  {
+        .level = .log_parsed.level
+        .http_method = .log_parsed.RequestMethod
+        .http_status, err = to_int(.log_parsed.OriginStatus)
+        .http_path = .log_parsed.RequestPath
+        .http_host = .log_parsed.RequestHost
+        .client_ip = .log_parsed.ClientHost
+        .response_time_ms = to_float(.log_parsed.Duration) / 1000000.0
+        .http_scheme = .log_parsed.RequestScheme
+        .full_url, err = .http_scheme + "://" + .http_host + .http_path
+      }
+
+      # Elasticsearch
+      if starts_with(string!(.container_name), "es") {
+        .level = downcase(string!(.log_parsed."log.level"))
+        .cluster_name = .log_parsed."elasticsearch.cluster.name"
+        .node_name = .log_parsed."elasticsearch.node.name"
+      }
+  
 
 sinks:
   journald_sink:
@@ -91,7 +123,7 @@ sinks:
     - "https://es01:9200"
     bulk:
       action: index
-      index: "vector-docker-%Y-%m-%d"
+      index: "vector-docker-v4-%Y-%m-%d"
     tls:
       ca_file: /var/lib/vector/certs/ca.crt
     auth:
@@ -99,6 +131,7 @@ sinks:
       user: kovalev.v
       password: "password"
     api_version: auto
+    pipeline: vector-mask-ip
     compression: gzip
     batch:
       max_bytes: 1000000
