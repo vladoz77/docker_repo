@@ -1,0 +1,10 @@
+services:
+  blackbox:
+    image: prom/blackbox-exporter:latest
+    container_name: blackbox_exporter
+    ports:
+    - 9115:9115
+    command:
+    - --config.file=/config/blackbox.yaml
+    volumes:
+    - ./blackbox.yaml:/config/blackbox.yaml
