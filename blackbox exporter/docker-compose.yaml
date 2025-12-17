@@ -8,3 +8,21 @@ services:
     - --config.file=/config/blackbox.yaml
     volumes:
     - ./blackbox.yaml:/config/blackbox.yaml
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+    - 9090:9090
+    command:
+    - --config.file=/config/prometheus.yaml
+    volumes:
+    - ./prometheus.yaml:/config/prometheus.yaml
+    - prometheus_data:/prometheus
+    restart: unless-stopped
+    
+volumes:
+  prometheus_data:
