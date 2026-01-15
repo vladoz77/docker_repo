@@ -1,7 +1,7 @@
 version: '3'
 services:
   portainer:
-    image: portainer/portainer-ce:2.19.0
+    image: portainer/portainer-ce:2.33.3
     container_name: portainer
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -10,13 +10,6 @@ services:
     ports:
       - 8000:8000
       - 9444:9443
-    networks:
-      - nginx_net
-    extra_hosts:
-      - oauth.home.local:172.24.0.1
 volumes:
   portainer_data:
 
-networks:
-  nginx_net:
-    external: true

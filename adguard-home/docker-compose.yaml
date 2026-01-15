@@ -1,0 +1,18 @@
+services:
+  adguardhome:
+    image: adguard/adguardhome
+    container_name: adguardhome
+    restart: unless-stopped
+    ports:
+      - 53:53/tcp # Expose port 53 on TCP and UDP for DNS queries
+      - 53:53/udp
+      - 80:80/tcp # Expose port 80 on TCP for HTTP web interface
+      - 443:443/tcp # Expose port 443 on TCP and UDP for HTTPS web interface
+      - 443:443/udp
+      - 854:853/tcp # Expose port 853 on TCP for DNS-over-TLS (DoT)
+      - 3000:3000/tcp # Expose port 3000 on TCP for AdGuard Home's API
+    volumes:
+      - ./config:/opt/adguardhome/conf # app configuration
+      - ./work:/opt/adguardhome/work # app working directory
+      - /etc/letsencrypt/:/opt/adguardhome/letsencrypt:ro
+  
