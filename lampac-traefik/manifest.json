@@ -8,7 +8,7 @@
     "dll": "Online.dll"
   },
   {
-    "enable": true,
+    "enable": false,
     "dll": "DLNA.dll"
   },
   {
