@@ -14,11 +14,13 @@ services:
     expose:
       - "2053" # Web UI
       - "8443" # XHTTP REALITY
+      - "8444" # Trojan WebSocket
       - "2096" # Subscription
     labels:
       - traefik.enable=true
       # Panel service
       - traefik.http.services.3x-ui-panel.loadbalancer.server.port=2053
+      - traefik.http.services.3x-ui-trojan-ws.loadbalancer.server.port=8444
       - traefik.tcp.services.3x-ui-xhttp.loadbalancer.server.port=8443
       - traefik.http.services.3x-ui-sub.loadbalancer.server.port=2096
       # Panel router
@@ -33,6 +35,12 @@ services:
       - traefik.http.routers.3x-ui-sub.tls=true
       - traefik.http.routers.3x-ui-sub.tls.certresolver=le
       - traefik.http.routers.3x-ui-sub.service=3x-ui-sub
+      # Trojan WebSocket router
+      - traefik.http.routers.3x-ui-trojan-ws.rule=Host(`${DOMAIN}`) && PathPrefix(`${TROJAN_WS_PATH}`)
+      - traefik.http.routers.3x-ui-trojan-ws.entrypoints=websecure
+      - traefik.http.routers.3x-ui-trojan-ws.tls=true
+      - traefik.http.routers.3x-ui-trojan-ws.tls.certresolver=le
+      - traefik.http.routers.3x-ui-trojan-ws.service=3x-ui-trojan-ws
       # REALITY xhttp over TCP passthrough
       - traefik.tcp.routers.3x-ui-xhttp.rule=HostSNI(`${XHTTP_REALITY_SNI}`)
       - traefik.tcp.routers.3x-ui-xhttp.entrypoints=websecure
