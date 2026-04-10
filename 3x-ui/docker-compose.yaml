@@ -1,0 +1,93 @@
+services:
+  3x-ui:
+    image: ghcr.io/mhsanaei/3x-ui:${VERSION:-latest}
+    container_name: 3x-ui
+    hostname: ${DOMAIN}
+    restart: unless-stopped
+    volumes:
+    - db:/etc/x-ui/
+    env_file:
+        - .env
+    tty: true
+    networks:
+      - traefik
+    expose:
+      - "2053" # Web UI
+      - "8443" # XHTTP REALITY
+      - "8444" # Trojan WebSocket
+      - "2096" # Subscription
+    labels:
+      - traefik.enable=true
+      # Panel service
+      - traefik.http.services.3x-ui-panel.loadbalancer.server.port=2053
+      - traefik.http.services.3x-ui-trojan-ws.loadbalancer.server.port=8444
+      - traefik.tcp.services.3x-ui-xhttp.loadbalancer.server.port=8443
+      - traefik.http.services.3x-ui-sub.loadbalancer.server.port=2096
+      # Panel router
+      - traefik.http.routers.3x-ui-panel.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.3x-ui-panel.entrypoints=websecure
+      - traefik.http.routers.3x-ui-panel.tls=true
+      - traefik.http.routers.3x-ui-panel.tls.certresolver=le
+      - traefik.http.routers.3x-ui-panel.service=3x-ui-panel
+      # Subscription router
+      - traefik.http.routers.3x-ui-sub.rule=Host(`${DOMAIN}`) && PathPrefix(`/sub`)
+      - traefik.http.routers.3x-ui-sub.entrypoints=websecure
+      - traefik.http.routers.3x-ui-sub.tls=true
+      - traefik.http.routers.3x-ui-sub.tls.certresolver=le
+      - traefik.http.routers.3x-ui-sub.service=3x-ui-sub
+      # Trojan WebSocket router
+      - traefik.http.routers.3x-ui-trojan-ws.rule=Host(`${DOMAIN}`) && PathPrefix(`${TROJAN_WS_PATH}`)
+      - traefik.http.routers.3x-ui-trojan-ws.entrypoints=websecure
+      - traefik.http.routers.3x-ui-trojan-ws.tls=true
+      - traefik.http.routers.3x-ui-trojan-ws.tls.certresolver=le
+      - traefik.http.routers.3x-ui-trojan-ws.service=3x-ui-trojan-ws
+      # REALITY xhttp over TCP passthrough
+      - traefik.tcp.routers.3x-ui-xhttp.rule=HostSNI(`${XHTTP_REALITY_SNI}`)
+      - traefik.tcp.routers.3x-ui-xhttp.entrypoints=websecure
+      - traefik.tcp.routers.3x-ui-xhttp.tls=true
+      - traefik.tcp.routers.3x-ui-xhttp.tls.passthrough=true
+      - traefik.tcp.routers.3x-ui-xhttp.service=3x-ui-xhttp
+      
+
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      # EntryPoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
+      - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.http.tls=true"
+      - "--metrics.prometheus.entrypoint=metrics"
+      # https configuration
+      - "--certificatesresolvers.le.acme.httpchallenge=true"
+      - "--certificatesresolvers.le.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.le.acme.email=${EMAIL}"
+      - "--certificatesresolvers.le.acme.storage=/letsencrypt/acme.json"
+      # Providers 
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik"
+      # Observability 
+      - "--log.level=DEBUG"
+      - "--accesslog=true"
+      - "--metrics.prometheus=true"
+      - "--entrypoints.metrics.address=:8082"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./letsencrypt:/letsencrypt
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8082:8082"
+    networks:
+      - traefik
+      
+networks:
+  traefik:
+
+volumes:
+  db:
