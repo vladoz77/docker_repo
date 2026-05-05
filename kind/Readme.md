@@ -28,6 +28,7 @@ nodes:
 - [Docker](https://docs.docker.com/get-docker/)
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
 - [kind](https://kind.sigs.k8s.io/docs/user/quick-start/)
+- [Helm](https://helm.sh/docs/intro/install/)
 
 Проверить установку можно так:
 
@@ -35,6 +36,7 @@ nodes:
 docker --version
 kubectl version --client
 kind --version
+helm version
 ```
 
 ## Установка kind
@@ -47,14 +49,6 @@ chmod +x ./kind
 sudo mv ./kind /usr/local/bin/kind
 ```
 
-### macOS
-
-Если установлен Homebrew:
-
-```bash
-brew install kind
-```
-
 ### Установка kubectl
 
 Если `kubectl` ещё не установлен, можно поставить его по официальной инструкции:
@@ -63,6 +57,16 @@ brew install kind
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 chmod +x kubectl
 sudo mv kubectl /usr/local/bin/
+```
+
+### Установка Helm
+
+Если `helm` ещё не установлен:
+
+#### Linux
+
+```bash
+curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 ```
 
 ## Создание кластера
@@ -154,6 +158,257 @@ curl http://EXTERNAL-IP
 ```bash
 kubectl delete svc demo
 kubectl delete deployment demo
+```
+
+## Envoy Gateway + HTTPS с самоподписанным CA
+
+### Установите Envoy Gateway controller
+
+Helm chart Envoy Gateway поднимает controller и необходимые CRD для `Gateway API`.
+
+```bash
+helm install eg oci://docker.io/envoyproxy/gateway-helm \
+  --version v1.7.2 \
+  -n envoy-gateway-system \
+  --create-namespace
+
+kubectl apply -f - <<'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: eg
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+EOF
+```
+
+Проверка:
+
+```bash
+kubectl get gatewayclass
+kubectl get pods -n envoy-gateway-system
+```
+
+### Установите cert-manager с поддержкой Gateway API
+
+```bash
+helm upgrade --install cert-manager oci://quay.io/jetstack/charts/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.20.2 \
+  --set crds.enabled=true \
+  --set config.enableGatewayAPI=true
+```
+
+Проверка:
+
+```bash
+kubectl get pods -n cert-manager
+kubectl wait --for=condition=Available deployment \
+  -n cert-manager \
+  --all \
+  --timeout=5m
+```
+
+Примечание: если `cert-manager` был установлен до появления CRD `Gateway API`, после их установки перезапустите controller:
+
+```bash
+kubectl rollout restart deployment cert-manager -n cert-manager
+```
+
+### Установите trust-manager
+
+`trust-manager` будет автоматически собирать CA bundle и раскладывать его по `ConfigMap` в кластере.
+
+```bash
+helm repo add jetstack https://charts.jetstack.io --force-update
+helm upgrade trust-manager jetstack/trust-manager \
+  --install \
+  --namespace cert-manager 
+```
+
+Проверка:
+
+```bash
+kubectl get pods -n cert-manager
+kubectl get crd bundles.trust.cert-manager.io
+```
+
+### Создайте self-signed CA, ClusterIssuer и trust bundle
+
+Ниже создаются:
+
+- `selfsigned-issuer` для bootstrap корневого сертификата
+- `ca` и `ca-secret` в namespace `cert-manager`
+- `ca-issuer` для выпуска leaf-сертификатов
+- `Bundle` `trust-ca` для распространения CA bundle по кластеру
+
+```bash
+kubectl apply -f - <<'EOF'
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+spec:
+  selfSigned: {}
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ca
+  namespace: cert-manager
+spec:
+  isCA: true
+  subject:
+    organizations:
+      - "Vlad's homelab"
+    organizationalUnits:
+      - "Home lab"
+    localities:
+      - "Ryazan"
+    countries:
+      - "RU"
+  commonName: ca
+  secretName: ca-secret
+  privateKey:
+    encoding: PKCS8
+    algorithm: RSA
+    size: 4096
+    rotationPolicy: Always
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ca-issuer
+spec:
+  ca:
+    secretName: ca-secret
+
+---
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: trust-ca
+spec:
+  sources:
+  - secret:
+      name: ca-secret
+      key: tls.crt
+  target:
+    configMap:
+      key: trust-bundle.pem
+EOF
+```
+
+Проверка bootstrap CA:
+
+```bash
+kubectl get clusterissuer selfsigned-issuer ca-issuer
+kubectl wait --for=condition=Ready certificate/ca -n cert-manager --timeout=5m
+kubectl get certificate ca -n cert-manager
+kubectl get secret ca-secret -n cert-manager
+kubectl describe certificate ca -n cert-manager
+kubectl get bundle trust-ca
+kubectl describe bundle trust-ca
+```
+
+Примечание: в текущих версиях `trust-manager` пустой `namespaceSelector` у `Bundle` означает распространение target `ConfigMap` во все namespace кластера.
+
+### Создайте Gateway с listeners HTTP и HTTPS
+
+`cert-manager` создаст `Certificate` и TLS secret автоматически по аннотации `cert-manager.io/cluster-issuer: ca-issuer`. Для `Envoy Gateway`, установленного chart-ом выше, по умолчанию используется `GatewayClass` с именем `eg`.
+
+```bash
+kubectl apply -f - <<'EOF'
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+  annotations:
+    cert-manager.io/cluster-issuer: ca-issuer
+spec:
+  gatewayClassName: eg
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: https
+    protocol: HTTPS
+    port: 443
+    hostname: "*.dev.local"
+    allowedRoutes:
+      namespaces:
+        from: All
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: envoy-tls-secret
+EOF
+```
+
+Проверка:
+
+```bash
+kubectl get gateway -n envoy-gateway-system
+kubectl describe gateway envoy-gateway -n envoy-gateway-system
+kubectl get certificate -n envoy-gateway-system
+kubectl get secret envoy-tls-secret -n envoy-gateway-system
+```
+
+Этот вариант:
+
+- создаёт `Gateway` `envoy-gateway`
+- поднимает listeners `http` и `https`
+- использует `ClusterIssuer` `ca-issuer`
+- выпускает TLS secret `envoy-tls-secret` автоматически
+
+Важно:
+
+- для автоматического выпуска сертификата у `HTTPS` listener обязательно должны быть `hostname`, `tls.mode: Terminate` и `certificateRefs`
+- `HTTPRoute`, которые должны публиковаться через этот gateway, должны ссылаться на `Gateway` с именем `envoy-gateway`
+- wildcard `*.dev.local` покрывает хосты вида `app.dev.local`, но не сам `dev.local`
+
+
+### Получите адрес Gateway
+
+```bash
+kubectl get gateway envoy-gateway -n envoy-gateway-system \
+  -o jsonpath='{.status.addresses[0].value}'
+echo
+```
+
+Если вы используете `*.dev.local`, добавьте в `/etc/hosts` конкретный hostname, который будете открывать, например:
+
+```text
+172.18.255.201 app.dev.local
+```
+
+Здесь `172.18.255.201` нужно заменить на реальный адрес из статуса `Gateway` или `EXTERNAL-IP` сервиса Envoy.
+
+Если у локального кластера нет внешнего адреса, посмотрите сервисы Envoy Gateway:
+
+```bash
+kubectl get svc -n envoy-gateway-system
+```
+
+И используйте `port-forward` к сервису data plane. Имя сервиса можно получить так:
+
+```bash
+export ENVOY_SERVICE=$(kubectl get svc -n envoy-gateway-system \
+  --selector=gateway.envoyproxy.io/owning-gateway-namespace=envoy-gateway-system,gateway.envoyproxy.io/owning-gateway-name=envoy-gateway \
+  -o jsonpath='{.items[0].metadata.name}')
+
+kubectl -n envoy-gateway-system port-forward service/${ENVOY_SERVICE} 8080:80 8443:443
 ```
 
 ## Проверка кластера
