@@ -1,0 +1,18 @@
+{
+  order forward_proxy before file_server
+}
+
+:443, {$DOMAIN} {
+  tls {$EMAIL}
+
+  forward_proxy {
+    basic_auth {$PROXY_LOGIN} {$PROXY_PASSWORD}
+    hide_ip
+    hide_via
+    probe_resistance
+  }
+
+  file_server {
+    root /var/www/html
+  }
+}
