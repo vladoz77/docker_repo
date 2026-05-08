@@ -76,7 +76,7 @@ docker compose version
 
 ### 1. Заполни `.env`
 
-Открой [.env](/home/vlad/docker_repo/naiveproxy/.env) и подставь свои значения:
+Открой `.env` и подставь свои значения:
 
 ```env
 DOMAIN=your.domain.com
@@ -93,30 +93,12 @@ PROXY_PASSWORD=change_me
 
 ### 2. Сгенерируй логин и пароль
 
-Логин:
-
-```sh
-openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 16
-```
-
-Пароль:
-
-```sh
-openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 24
-```
-
-Можно вывести сразу в удобном виде:
-
 ```sh
 echo "Логин:  $(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 16)"
 echo "Пароль: $(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 24)"
 ```
 
 После этого вставь значения в `.env`.
-
-### 3. При желании измени страницу-заглушку
-
-Файл [site/index.html](/home/vlad/docker_repo/naiveproxy/site/index.html) будет открываться в браузере при заходе на домен.
 
 ## Запуск
 
@@ -137,6 +119,8 @@ docker compose -f Docker-compose.yaml ps
 ```sh
 docker compose -f Docker-compose.yaml logs -f naiveproxy
 ```
+
+
 
 ## Как это работает
 
@@ -197,6 +181,14 @@ https://your.domain.com
 
 ```sh
 ss -tlnup | grep 443
+```
+
+### 6. Проверка работы прокси
+
+Для проверки прокси можно выполнить запросём через `curl`:
+
+```bash
+curl -x https://YOUR_LOGIN:YOUR_PASSWORD@your.domain.com:443 https://ipinfo.io
 ```
 
 ## Строка для клиента
