@@ -151,6 +151,69 @@ docker compose logs --tail=100 sing-box
 
 4. Открыть в браузере `https://DOMAIN` и убедиться, что заглушка отдается без ошибок сертификата.
 
+## Настройка клиента sing-box
+
+Для подключения к этому серверу удобнее всего использовать `sing-box` как клиент с outbound типа `naive`.
+
+Ниже пример клиентского конфига, который поднимает локальный proxy на `127.0.0.1:2080` и отправляет трафик на ваш сервер:
+
+```json
+{
+  "log": {
+    "level": "info"
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed-in",
+      "listen": "127.0.0.1",
+      "listen_port": 2080
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "naive",
+      "tag": "naive-out",
+      "server": "example.com",
+      "server_port": 443,
+      "username": "myuser",
+      "password": "mypassword",
+      "tls": {
+        "enabled": true,
+        "server_name": "example.com"
+      }
+    }
+  ],
+  "route": {
+    "final": "naive-out"
+  }
+}
+```
+
+Что заменить:
+
+- `example.com` на значение `DOMAIN`
+- `myuser` на `PROXY_LOGIN`
+- `mypassword` на `PROXY_PASSWORD`
+
+Сохранить конфиг, например, как `client.json`, затем запустить:
+
+```bash
+sing-box run -c client.json
+```
+
+После запуска локальный proxy будет доступен на `127.0.0.1:2080`.
+
+Можно использовать его в браузере, в системе или проверить через `curl`:
+
+```bash
+curl -v --proxy http://127.0.0.1:2080 https://ya.ru
+```
+
+Если нужен только SOCKS5, можно заменить inbound `mixed` на `socks`.
+
+Важно: `curl --proxy-http2 --proxy https://DOMAIN:443` проверяет обычный HTTPS proxy, но не `naive`-протокол напрямую. Для этого сервера корректная проверка идет через клиент `sing-box` с outbound типа `naive`.
+
 ## Частые проблемы
 
 ### `unknown command "sh" for "sing-box"`
