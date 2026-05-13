@@ -8,8 +8,9 @@
 
 1. Клиент подключается к домену по HTTPS.
 2. `Caddy` завершает TLS.
-3. Если запрос имеет метод `CONNECT`, `Caddy` проксирует его в `sing-box` по `h2c://sing-box:1080`.
-4. Остальные обычные HTTP-запросы обслуживаются как статическая страница из `caddy/site`.
+3. Для HTTPS-прокси `CONNECT` приходит с `:authority` целевого хоста, например `ya.ru:443`, поэтому `Caddy` должен слушать не только `https://DOMAIN`, но и `:443`.
+4. Если запрос имеет метод `CONNECT`, `Caddy` проксирует его в `sing-box` по `h2c://sing-box:1080`.
+5. Остальные обычные HTTP-запросы обслуживаются как статическая страница из `caddy/site`.
 
 ## Структура проекта
 
@@ -90,6 +91,7 @@ docker compose logs -f sing-box
 Файл: [caddy/config/Caddyfile](https://github.com/vladoz77/docker_repo/blob/naiveproxy/naiveproxy-singbox/caddy/config/Caddyfile)
 
 - слушает `{$DOMAIN}`
+- также принимает `CONNECT` на `:443`, чтобы запросы с `:authority` вида `example.org:443` не отбрасывались роутером
 - автоматически получает TLS-сертификат
 - проксирует `CONNECT` в `sing-box:1080`
 - отдает заглушку из `/var/www/html`
@@ -172,6 +174,20 @@ docker compose logs --tail=100 sing-box
 - корректность `PROXY_LOGIN` и `PROXY_PASSWORD`
 - что клиент настроен на домен из `DOMAIN`
 - что сертификат действительно выпущен
+- что `Caddyfile` слушает `:443, https://{$DOMAIN}`, а не только `{$DOMAIN}`
+
+### `auto_https disable_redirects`
+
+Эта опция не чинит сам туннель `CONNECT`.
+
+Она нужна здесь по другой причине:
+
+- `Caddy` слушает `:443` как catch-all для proxy-запросов
+- одновременно есть обычный HTTPS-сайт на `https://DOMAIN`
+- `auto_https disable_redirects` отключает автоматический редирект с `http://DOMAIN` на `https://DOMAIN`
+- вместе с `disable_http_challenge` это позволяет не зависеть от `:80`, если сертификат выпускается через TLS-ALPN challenge
+
+Итого: если `https://DOMAIN` в браузере открывается, а `curl --proxy-http2` получает `200`, после чего туннель закрывается, причина обычно не в `auto_https disable_redirects`, а в маршрутизации `CONNECT` или в том, что backend (`sing-box`) сразу закрывает поток.
 
 ## Остановка и обновление
 

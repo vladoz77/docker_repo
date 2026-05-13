@@ -1,5 +1,14 @@
-{$DOMAIN} {
-  tls {$EMAIL}
+{
+  email {$EMAIL}
+  auto_https disable_redirects
+}
+
+:443, https://{$DOMAIN} {
+  tls {
+    issuer acme {
+      disable_http_challenge
+    }
+  }
 
   route {
     @naive {
