@@ -52,6 +52,15 @@ PROXY_PASSWORD=mypassword
 - `PROXY_LOGIN` - логин для NaiveProxy
 - `PROXY_PASSWORD` - пароль для NaiveProxy
 
+Сгенерируй логин и пароль:
+
+```sh
+echo "Логин:  $(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 16)"
+echo "Пароль: $(openssl rand -base64 48 | tr -dc 'A-Za-z0-9' | head -c 24)"
+```
+
+После этого вставь значения в `.env`.
+
 ## Запуск
 
 Собрать и поднять сервисы:
