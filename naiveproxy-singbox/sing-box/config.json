@@ -7,6 +7,7 @@
     {
       "type": "naive",
       "tag": "naive-in",
+      "network": "tcp",
       "listen": "0.0.0.0",
       "listen_port": 1080,
       "users": [
