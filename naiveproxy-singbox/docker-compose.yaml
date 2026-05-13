@@ -2,6 +2,7 @@ services:
   caddy:
     image: caddy:2.11.3
     restart: unless-stopped
+    container_name: caddy
     env_file:
       - .env
     ports:
