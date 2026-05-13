@@ -1,0 +1,39 @@
+services: 
+  caddy:
+    image: caddy:2.11.3
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./caddy/config:/etc/caddy/
+      - ./caddy/site:/var/www/html
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - proxy 
+    depends_on:
+      - sing-box
+
+  sing-box:
+    build:
+      context: ./sing-box
+    container_name: sing-box
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./sing-box/config.json:/etc/sing-box/config.json.template:ro
+    networks:
+      - proxy
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  proxy:
+    driver: bridge

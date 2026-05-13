@@ -1,0 +1,20 @@
+{$DOMAIN} {
+  tls {$EMAIL}
+
+  route {
+    @naive {
+      method CONNECT
+    }
+
+    handle @naive {
+      reverse_proxy h2c://sing-box:1080 {
+        header_up Proxy-Authorization {header.Proxy-Authorization}
+      }
+    }
+
+    handle {
+      root * /var/www/html
+      file_server
+    }
+  }
+}
