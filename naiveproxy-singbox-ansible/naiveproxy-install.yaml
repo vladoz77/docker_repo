@@ -1,0 +1,6 @@
+- name: Common configuration for all nodes
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - common

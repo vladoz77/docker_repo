@@ -1,0 +1,25 @@
+# tasks/firewall.yaml
+- name: Install ufw
+  ansible.builtin.apt:
+    name: ufw
+    state: present
+    update_cache: true  
+
+- name: Allow 
+  community.general.ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ firewall_allowed_ports }}"
+
+
+- name: UFW - Enable and deny by default
+  community.general.ufw:
+    state: enabled
+    default: deny
+  notify:
+    - Reload UFW 
+
+- name: flush_handlers
+  ansible.builtin.meta: flush_handlers

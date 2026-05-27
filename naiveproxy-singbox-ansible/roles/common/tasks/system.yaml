@@ -1,0 +1,15 @@
+# tasks/system.yaml
+- name: configure hostname
+  ansible.builtin.hostname:
+    name: "{{ hostname }}"
+
+- name: Ensure hostname is present in /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: "^127\\.0\\.1\\.1\\s+"
+    line: "127.0.1.1 {{ hostname }}"
+    state: present
+
+- name: set timezones
+  community.general.timezone:
+    name: "{{ timezone }}"

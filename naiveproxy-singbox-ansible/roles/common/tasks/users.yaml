@@ -1,0 +1,19 @@
+# tasks/users.yaml
+- name: Create user
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    state: "{{ item.state | default('present') }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
+    groups: "{{ item.groups | default(omit) }}"
+    append: yes
+    create_home: yes
+    password: "{{ item.password | password_hash('sha512') }}"
+  loop: "{{ users }}"
+
+- name: Add SSH authorized keys
+  ansible.posix.authorized_key:
+    user: "{{ item.0.username }}"
+    key: "{{ item.1 }}"
+    state: "{{ item.0.state }}"
+  loop: "{{ users | subelements('ssh_key', skip_missing=True) }}"
+  when: item.0.state == 'present'

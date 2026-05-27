@@ -1,0 +1,8 @@
+# tasks/main.yaml
+- ansible.builtin.import_tasks: system.yaml
+- ansible.builtin.import_tasks: packages.yaml
+- ansible.builtin.import_tasks: users.yaml
+- ansible.builtin.import_tasks: ssh.yaml
+- ansible.builtin.import_tasks: firewall.yaml
+  
+
