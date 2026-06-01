@@ -1,0 +1,14 @@
+services:
+  registry:
+    image: registry:2
+    restart: on-failure
+    ports:
+      - "5000:5000"
+    environment:
+      - REGISTRY_PROXY_USERNAME=${DOCKER_USER}
+      - REGISTRY_PROXY_PASSWORD=${DOCKER_PASSWORD}
+    volumes:
+      - ./config:/etc/docker/registry
+      - registry_data:/var/lib/registry
+volumes:
+  registry_data:
