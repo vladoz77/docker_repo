@@ -171,14 +171,6 @@ helm install eg oci://docker.io/envoyproxy/gateway-helm \
   --version v1.7.2 \
   -n envoy-gateway-system \
   --create-namespace
-
-kubectl apply -f - <<'EOF'
-apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: eg
-spec:
-  controllerName: gateway.envoyproxy.io/gatewayclass-controller
 EOF
 ```
 

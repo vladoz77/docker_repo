@@ -1,5 +1,12 @@
 version: 0.1
 
+log:
+  level: debug
+  formatter: json
+
+http:
+  addr: :5000
+
 proxy:
   remoteurl: https://registry-1.docker.io
 
