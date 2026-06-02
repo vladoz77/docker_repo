@@ -1,0 +1,142 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "dns": {
+    "strategy": "ipv4_only",
+    "reverse_mapping": true,
+    "servers": [
+      {
+        "type": "https",
+        "tag": "dns-secure",
+        "server": "8.8.8.8",
+        "tls": {
+          "server_name": "dns.google"
+        },
+        "detour": "naive"
+      },
+      {
+        "type": "https",
+        "tag": "dns-direct",
+        "server": "77.88.8.88",
+        "tls": {
+          "server_name": "safe.dot.dns.yandex.net"
+        }
+      }
+    ],
+    "rules": [
+      {
+        "rule_set": [
+          "sites-direct"
+        ],
+        "server": "dns-direct"
+      }
+    ],
+    "final": "dns-secure"
+  },
+  "inbounds": [
+    {
+      "type": "mixed",
+      "listen": "0.0.0.0",
+      "listen_port": 2080
+    }
+  ],
+
+  "outbounds": [
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "naive",
+      "tag": "naive",
+
+      "server": "vps.devhomelab.site",
+      "server_port": 443,
+
+      "username": "EYXm6znYIVEv3esN",
+      "password": "dICiCSoa6oL8bT3dwN8bnCKN",
+       
+      "udp_over_tcp": {
+        "enabled": true
+      },
+      
+      "quic": false,
+
+      "tls": {
+        "enabled": true,
+        "server_name": "vps.devhomelab.site"
+      }
+    }
+  ],
+  "route": {
+    "final": "naive",
+    "auto_detect_interface": true,
+    "default_domain_resolver": {
+      "server": "dns-secure"
+    },
+    "rule_set": [
+      {
+        "tag": "sites-direct",
+        "rules": [
+          {
+            "domain_suffix": [
+              ".ru",
+              ".su",
+              ".xn--p1ai",
+              "yandex.net",
+              "yastatic.net",
+              "vk.com",
+              "vk-portal.net",
+              "2gis.com"
+            ]
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "action": "sniff",
+        "sniffer": [
+          "http",
+          "tls",
+          "dns",
+          "quic"
+        ],
+        "timeout": "300ms"
+      },
+      {
+        "protocol": "dns",
+        "action": "hijack-dns"
+      },
+      {
+        "action": "resolve"
+      },
+      {
+        "ip_is_private": true,
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "package_name": [
+          "ru.oneme.app"
+        ],
+        "action": "route",
+        "outbound": "direct"
+      },
+      {
+        "rule_set": [
+          "sites-direct"
+        ],
+        "action": "route",
+        "outbound": "direct"
+      }
+    ]
+  },
+  "experimental": {
+    "cache_file": {
+      "enabled": true
+    }
+  }
+}
