@@ -1,0 +1,46 @@
+# default/main.yaml
+# Default hostname name:
+hostname: "srv-{{ ansible_machine_id[0:8] }}"
+
+# Default timezone
+# Get all list timedatectl list-timezones
+timezone: "Europe/Moscow"
+
+# Default packages
+packages:
+  - jq
+
+# Default users configuration
+users:
+  - username: vlad
+    password: password
+    state: present
+    shell: /bin/bash
+    groups: 
+      - sudo
+    ssh_key: 
+      - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH1FAFZVaFV0XpLYsrH7fQHY6llL08uFH7KjvDjKJZth vlad@fedora"
+
+# Config ssh server
+sshd_config_path: /etc/ssh/sshd_config
+ssh_port: 22
+ssh_permit_root_login: "no"
+ssh_pubkey_authentication: "yes"
+ssh_password_authentication: "no"
+ssh_max_auth_tries: 3
+ssh_max_sessions: 2
+ssh_login_grace_time: 30s
+ssh_client_alive_interval: 300
+ssh_client_alive_count_max: 2
+
+# Firewall configuration
+firewall_allowed_ports:
+  - port: "{{ ssh_port }}"
+    proto: tcp
+    comment: "SSH"
+  - port: 80
+    proto: tcp
+    comment: "HTTP"
+  - port: 443
+    proto: tcp
+    comment: "HTTPS"

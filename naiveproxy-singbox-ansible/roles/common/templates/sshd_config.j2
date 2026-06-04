@@ -1,0 +1,45 @@
+# templates/sshd_config.j2 - SSH server configuration
+# Managed by Ansible - do not edit manually
+
+# Network
+Port {{ ssh_port }}
+AddressFamily any
+ListenAddress 0.0.0.0
+ListenAddress ::
+
+# Host keys
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+HostKey /etc/ssh/ssh_host_ed25519_key
+
+# Authentication
+PermitRootLogin {{ ssh_permit_root_login }}
+PubkeyAuthentication {{ ssh_pubkey_authentication  }}
+PasswordAuthentication {{ ssh_password_authentication }}
+ChallengeResponseAuthentication no
+MaxAuthTries {{ ssh_max_auth_tries }}
+MaxSessions {{ ssh_max_sessions }}
+LoginGraceTime {{ ssh_login_grace_time }}
+
+# Disable unused auth methods
+KerberosAuthentication no
+GSSAPIAuthentication no
+HostbasedAuthentication no
+PermitEmptyPasswords no
+
+# Session settings
+ClientAliveInterval {{ ssh_client_alive_interval }}
+ClientAliveCountMax {{ ssh_client_alive_count_max }}
+
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+
+# Subsystems
+Subsystem sftp /usr/lib/openssh/sftp-server
+
+# Misc
+PrintMotd no
+PrintLastLog yes
+TCPKeepAlive yes
+UseDNS no

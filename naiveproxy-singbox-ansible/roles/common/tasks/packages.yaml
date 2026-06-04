@@ -1,0 +1,13 @@
+# tasks/packages.yaml
+- name: Update all installed packages
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: dist
+    autoremove: true
+    cache_valid_time: 3600
+
+- name: Install packages
+  ansible.builtin.apt:
+    name: "{{ packages }}"
+    state: present
+    update_cache: true
