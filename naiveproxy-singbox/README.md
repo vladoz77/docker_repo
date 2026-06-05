@@ -196,6 +196,14 @@ docker compose logs --tail=100 sing-box
 - `myuser` на `PROXY_LOGIN`
 - `mypassword` на `PROXY_PASSWORD`
 
+> Можно также использовать короткую строку подключения в формате:
+>
+> `naive+https://LOGIN:PASSWORD@DOMAIN:443`
+>
+> например:
+>
+> `naive+https://b1ZFXtzE1CWkQ7DS:IZA7lUwPedtttXcZggq7MMA1@vps.devhomelab.site:443`
+
 Сохранить конфиг, например, как `client.json`, затем запустить:
 
 ```bash
