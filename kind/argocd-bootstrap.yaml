@@ -1,0 +1,41 @@
+nameOverride: argocd
+fullnameOverride: argocd
+
+crds:
+  keep: false
+
+global:
+  logging:
+    format: json
+    level: info
+
+configs:
+  cm:
+    application.resourceTrackingMethod: annotation
+    controller.diff.server.side: "true"
+  secret:
+    argocdServerAdminPassword: "$2a$10$S6gJky57fHflfWp7RC7Y6OLTN1I6VMRelH/jsNP3DCxOyVf5JVf9a"
+  
+
+server:
+  extraArgs:
+    - --insecure
+  service:
+    type: NodePort
+    nodePort: 30080
+
+redis:
+  enabled: true
+  image: 
+    repository: redis
+    tag: 8.2.3-alpine
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
+
+applicationSet:
+  metrics:
+    enabled: false
