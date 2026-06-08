@@ -1,6 +1,6 @@
 services:
   3x-ui:
-    image: ghcr.io/mhsanaei/3x-ui:${VERSION:-latest}
+    image: ghcr.io/mhsanaei/3x-ui:${3XUI_VERSION:-latest}
     container_name: 3x-ui
     hostname: ${DOMAIN}
     restart: unless-stopped
@@ -50,7 +50,7 @@ services:
       
 
   traefik:
-    image: traefik:latest
+    image: traefik:${TRAEFIK_VERSION:-latest}
     container_name: traefik
     restart: unless-stopped
     command:
@@ -79,6 +79,9 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
+    dns:
+      - 8.8.8.8      
+      - 1.1.1.1      
     ports:
       - "80:80"
       - "443:443"
