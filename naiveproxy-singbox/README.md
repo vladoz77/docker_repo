@@ -2,7 +2,7 @@
 
 Связка `Caddy` и `sing-box` для запуска `NaiveProxy` через Docker Compose.
 
-`Caddy` принимает HTTPS-трафик на домене, выпускает TLS-сертификаты через ACME и проксирует `CONNECT`-запросы в `sing-box`. Сам `sing-box` поднимает inbound типа `naive` и отдает трафик напрямую через `direct` outbound.
+`Caddy` принимает HTTPS-трафик на домене, выпускает TLS-сертификаты через ACME и проксирует `CONNECT`-запросы в `sing-box`. Сам `sing-box` поднимает inbound типов `naive` и `hysteria2` и отдает трафик напрямую через `direct` outbound.
 
 ## Как это работает
 
@@ -50,8 +50,8 @@ PROXY_PASSWORD=mypassword
 
 - `DOMAIN` - домен, на котором будет доступен сервер
 - `EMAIL` - email для ACME-регистрации сертификатов
-- `PROXY_LOGIN` - логин для NaiveProxy
-- `PROXY_PASSWORD` - пароль для NaiveProxy
+- `PROXY_LOGIN` - логин для NaiveProxy и имя пользователя для Hysteria2
+- `PROXY_PASSWORD` - пароль для NaiveProxy и Hysteria2
 
 Сгенерируй логин и пароль:
 
@@ -148,7 +148,88 @@ docker compose logs --tail=100 caddy
 ```bash
 docker compose logs --tail=100 sing-box
 ```
+## Клиенты и подключение
 
+### NaiveProxy (TCP порт 1080)
+
+```
+naive://user:password@example.com:1080
+```
+
+Клиенты: [nekoray](https://github.com/MatsuriDayo/nekoray), [sing-box-cli](https://github.com/SagerNet/sing-box)
+
+### Hysteria2 (UDP порт 443)
+
+```
+hysteria://myuser:mypassword@example.com:443
+```
+
+**Особенности:**
+- Имя пользователя для Hysteria2 берется из `PROXY_LOGIN`
+
+- Работает через **UDP 443** (совместимо с TCP 443 Caddy)
+- Обфускация трафика (**Salamander**)
+- Высокая пропускная способность (до 1000 Mbps)
+- Маскируется под HTTPS к вашему домену
+
+Клиенты: [sing-box-cli](https://github.com/SagerNet/sing-box), [hiddify-next](https://github.com/hiddify/hiddify-next)
+
+## Конфигурация sing-box
+
+sing-box поддерживает два типа inbound:
+
+### 1. NaiveProxy (TCP 1080)
+
+```json
+{
+  "type": "naive",
+  "tag": "naive-in",
+  "network": "tcp",
+  "listen": "0.0.0.0",
+  "listen_port": 1080,
+  "users": [
+    {
+      "username": "${PROXY_LOGIN}",
+      "password": "${PROXY_PASSWORD}"
+    }
+  ]
+}
+```
+
+### 2. Hysteria2 (UDP 443)
+
+```json
+{
+  "type": "hysteria2",
+  "tag": "hysteria2-in",
+  "listen": "0.0.0.0",
+  "listen_port": 443,
+  "up_mbps": 1000,
+  "down_mbps": 1000,
+  "obfs": {
+    "type": "salamander",
+    "password": "${PROXY_PASSWORD}"
+  },
+  "users": [
+    {
+      "name": "${PROXY_LOGIN}",
+      "password": "${PROXY_PASSWORD}"
+    }
+  ],
+  "masquerade": {
+    "type": "proxy",
+    "url": "https://${DOMAIN}",
+    "rewrite_host": true
+  }
+}
+```
+
+## Безопасность
+
+1. Изменить логин и пароль в `.env` на надежные значения
+2. Hysteria2 использует обфускацию **Salamander** для скрытия протокола
+3. Весь трафик шифруется (TLS для Caddy, QUIC для Hysteria2)
+4. Оба протокола маскируются под обычный HTTPS трафик
 4. Открыть в браузере `https://DOMAIN` и убедиться, что заглушка отдается без ошибок сертификата.
 
 ## Настройка клиента sing-box

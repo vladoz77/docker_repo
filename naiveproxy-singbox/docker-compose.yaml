@@ -8,7 +8,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "443:443/udp"
     volumes:
       - ./caddy/config:/etc/caddy/
       - ./caddy/site:/var/www/html
@@ -26,6 +25,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    ports:
+      - "443:443/udp"
     volumes:
       - ./sing-box/config.json:/etc/sing-box/config.json.template:ro
     networks:

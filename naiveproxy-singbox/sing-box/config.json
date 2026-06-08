@@ -16,6 +16,29 @@
           "password": "${PROXY_PASSWORD}"
         }
       ]
+    },
+    {
+      "type": "hysteria2",
+      "tag": "hysteria2-in",
+      "listen": "0.0.0.0",
+      "listen_port": 443,
+      "up_mbps": 1000,
+      "down_mbps": 1000,
+      "obfs": {
+        "type": "salamander",
+        "password": "${PROXY_PASSWORD}"
+      },
+      "users": [
+        {
+          "name": "${PROXY_LOGIN}",
+          "password": "${PROXY_PASSWORD}"
+        }
+      ],
+      "masquerade": {
+        "type": "proxy",
+        "url": "https://${DOMAIN}",
+        "rewrite_host": true
+      }
     }
   ],
   "outbounds": [
