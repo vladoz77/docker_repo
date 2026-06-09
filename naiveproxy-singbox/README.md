@@ -41,9 +41,9 @@
 
 ```env
 DOMAIN=example.com
-EMAIL=admin@example.com
-PROXY_LOGIN=myuser
-PROXY_PASSWORD=mypassword
+EMAIL=mail.example.com
+PROXY_LOGIN=proxyuser
+PROXY_PASSWORD=proxypass
 ```
 
 Описание переменных:
@@ -148,12 +148,54 @@ docker compose logs --tail=100 caddy
 ```bash
 docker compose logs --tail=100 sing-box
 ```
-## Клиенты и подключение
 
-### NaiveProxy (TCP порт 1080)
+### Hysteria — детали и проверка
+
+- Протокол: Hysteria2 — UDP‑ориентированный прокси (использует UDP/443 на сервере).
+- Порт: `443/udp` должен быть проброшен и доступен извне (в `docker-compose.yaml` — `"443:443/udp"`).
+- Аутентификация: имя пользователя — `PROXY_LOGIN`, пароль — `PROXY_PASSWORD`.
+- Обфускация: `salamander` с паролем `PROXY_PASSWORD` (см. `sing-box/config.json`).
+- TLS: `sing-box` читает сертификат, выпущенный Caddy, из `/data/caddy/certificates/...` (поля `tls.certificate_path` и `tls.key_path` в серверном конфиге).
+- Маскировка: `masquerade` проксирует Hysteria под HTTPS вашего домена (`url: https://${DOMAIN}`, `rewrite_host: true`).
+
+Пример строки подключения (URI):
 
 ```
-naive://user:password@example.com:1080
+hysteria://PROXY_LOGIN:PROXY_PASSWORD@DOMAIN:443
+```
+
+Пример `outbound` для клиента `sing-box`, использующего Hysteria2:
+
+```json
+{
+  "type": "hysteria2",
+  "server": "example.com",
+  "server_port": 443,
+  "name": "proxyuser",
+  "password": "proxypass",
+  "obfs": {
+    "type": "salamander",
+    "password": "proxypass"
+  },
+  "tls": {
+    "enabled": true,
+    "server_name": "example.com"
+  }
+}
+```
+
+Как проверить работу Hysteria:
+
+- Убедитесь, что `443/udp` открыт извне (например, `nmap -sU -p 443 DOMAIN` или `ss -unu | grep :443` на хосте).
+- Запустите `sing-box` клиент с примерным `outbound` выше и проверьте, что трафик проходит.
+- Смотрите логи сервера: `docker compose logs -f sing-box` — ошибки TLS/обфускации будут видны в логах.
+
+## Клиенты и подключение
+
+### NaiveProxy (через Caddy, TCP 443)
+
+```
+naive+https://user:password@example.com:443
 ```
 
 Клиенты: [nekoray](https://github.com/MatsuriDayo/nekoray), [sing-box-cli](https://github.com/SagerNet/sing-box)
@@ -161,7 +203,7 @@ naive://user:password@example.com:1080
 ### Hysteria2 (UDP порт 443)
 
 ```
-hysteria://myuser:mypassword@example.com:443
+hysteria://proxyuser:proxypass@example.com:443
 ```
 
 **Особенности:**
@@ -169,7 +211,7 @@ hysteria://myuser:mypassword@example.com:443
 
 - Работает через **UDP 443** (совместимо с TCP 443 Caddy)
 - Обфускация трафика (**Salamander**)
-- Высокая пропускная способность (до 1000 Mbps)
+- Высокая пропускная способность (до 100 Mbps)
 - Маскируется под HTTPS к вашему домену
 
 Клиенты: [sing-box-cli](https://github.com/SagerNet/sing-box), [hiddify-next](https://github.com/hiddify/hiddify-next)
@@ -204,8 +246,8 @@ sing-box поддерживает два типа inbound:
   "tag": "hysteria2-in",
   "listen": "0.0.0.0",
   "listen_port": 443,
-  "up_mbps": 1000,
-  "down_mbps": 1000,
+  "up_mbps": 100,
+  "down_mbps": 100,
   "obfs": {
     "type": "salamander",
     "password": "${PROXY_PASSWORD}"

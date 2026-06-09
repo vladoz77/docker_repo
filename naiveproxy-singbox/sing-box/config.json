@@ -22,8 +22,8 @@
       "tag": "hysteria2-in",
       "listen": "0.0.0.0",
       "listen_port": 443,
-      "up_mbps": 1000,
-      "down_mbps": 1000,
+      "up_mbps": 100,
+      "down_mbps": 100,
       "obfs": {
         "type": "salamander",
         "password": "${PROXY_PASSWORD}"
@@ -34,6 +34,11 @@
           "password": "${PROXY_PASSWORD}"
         }
       ],
+      "tls": {
+        "enabled": true,
+        "certificate_path": "/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${DOMAIN}/${DOMAIN}.crt",
+        "key_path": "/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/${DOMAIN}/${DOMAIN}.key"
+      },  
       "masquerade": {
         "type": "proxy",
         "url": "https://${DOMAIN}",
