@@ -1,39 +1,70 @@
-version: '3.6'
 services:
-  gitlab:
-    image: gitlab/gitlab-ce:15.11.11-ce.0
+  gitlab-init:
+    image: alpine:latest
+    container_name: gitlab-init
     restart: unless-stopped
-    hostname: gitlab.home.local
-    container_name: gitlab
-    environment:
-       GITLAB_OMNIBUS_CONFIG: |
-         external_url 'http://gitlab.home.local' 
-    ports:
-      - '8088:80'
-      - '8443:443'
-      - '22:22'
+    env_file:
+      - .env
+    command: >
+     sh -c "apk add --no-cache gettext &&
+     envsubst < /templates/gitlab.rb.template > /etc/gitlab/gitlab.rb &&
+     envsubst < /templates/traefik.yml.template > /etc/traefik/traefik.yml &&
+     echo 'gitlab.rb and traefik.yml generated successfully'"
     volumes:
-      - '/opt/gitlab/config:/etc/gitlab'
-      - '/opt/gitlab/logs:/var/log/gitlab'
-      - '/opt/gitlab/data:/var/opt/gitlab'
+    - ./gitlab/gitlab.rb.template:/templates/gitlab.rb.template:ro
+    - ./traefik/traefik.yml.template:/templates/traefik.yml.template:ro
+    - gitlab_config:/etc/gitlab
     networks:
-      - ngix-manager_default
       - gitlab_net
+  
+  gitlab:
+    image: gitlab/gitlab-ee:%{GITLAB_VERSION:-latest}
+    container_name: gitlab
+    restart: unless-stopped
+    hostname: ${GITLAB_HOSTNAME}
+    volumes:
+      - 'gitlab_config:/etc/gitlab'
+      - './gitlab/logs:/var/log/gitlab'
+      - 'gitlab_data:/var/opt/gitlab'
+    shm_size: '256m'
 
-  gitlab-runner:
-   container_name: gitlab-runner
-   image: gitlab/gitlab-runner:latest
-   restart: always
-   volumes:
-     - '/opt/gitlab-runner/config:/etc/gitlab-runner'
-     - '/var/run/docker.sock:/var/run/docker.sock:rw'
-   networks:
-     - gitlab_net
+    labels:
+      - traefik.enable=true
+      # Gitlab router
+      - traefik.http.routers.gitlab.rule=Host(`${GITLAB_HOSTNAME}`)
+      - traefik.http.routers.gitlab.entrypoints=websecure
+      - traefik.http.routers.gitlab.tls=true
+      - traefik.http.routers.gitlab.tls.certresolver=le
+      - traefik.http.services.gitlab.loadbalancer.server.port=80
+      # Ssh router
+      - traefik.tcp.routers.gitlab-ssh.entrypoints=ssh
+      - traefik.tcp.routers.gitlab-ssh.rule=HostSNI(`*`)
+      - traefik.tcp.services.gitlab-ssh.loadbalancer.server.port=22
+    networks:
+      - gitlab_net
+    depends_on:
+      gitlab-init:
+        condition: service_completed_successfully
+  
+  traefik:
+    image: traefik:${TRAEFIK_VERSION:-latest}
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+     - 80:80
+     - 443:443
+     - 22:22
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+    - ./traefik/acme.json:/acme.json
+    networks:
+      - gitlab_net
+    depends_on:
+      - gitlab-init
 
 networks:
-  ngix-manager_default:
-    external: true
   gitlab_net:
-
-
-
+    name: gitlab_net
+    driver: bridge
+      
