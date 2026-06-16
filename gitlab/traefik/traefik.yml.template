@@ -25,7 +25,7 @@ certificatesResolvers:
   le:
     acme:
       email: ${TRAEFIK_ACME_EMAIL}
-      storage: /acme.json
+      storage: /etc/traefik/acme.json
       httpChallenge:
         entryPoint: web
 
