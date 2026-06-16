@@ -13,7 +13,7 @@ entryPoints:
   websecure:
     address: ":443"
   ssh:
-    address: ":22"
+    address: ":2224"
   metrics:
     address: ":8082"
 

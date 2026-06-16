@@ -14,4 +14,4 @@ nginx['proxy_set_headers'] = {
 }
 
 ## SSH
-gitlab_rails['gitlab_shell_ssh_port'] = 22
+gitlab_rails['gitlab_shell_ssh_port'] = 2224
