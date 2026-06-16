@@ -1,0 +1,11 @@
+[ERROR]: Task failed: Failed to connect to the host via ssh: Connection timed out during banner exchange
+Connection to 31.172.73.157 port 22 timed out
+Origin: <adhoc 'ansible.builtin.setup' task>
+
+{'action': 'ansible.builtin.setup', 'args': {}, 'timeout': 0, 'async_val': 0, 'poll': 15}
+
+naiveproxy-de | UNREACHABLE! => {
+    "changed": false,
+    "msg": "Task failed: Failed to connect to the host via ssh: Connection timed out during banner exchange\r\nConnection to 31.172.73.157 port 22 timed out",
+    "unreachable": true
+}
