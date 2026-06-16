@@ -14,7 +14,7 @@ services:
     - ./gitlab/gitlab.rb.template:/templates/gitlab.rb.template:ro
     - ./traefik/traefik.yml.template:/templates/traefik.yml.template:ro
     - gitlab_config:/etc/gitlab
-    - ./traefik:/etc/traefik
+    - ./traefik:/result
     networks:
       - gitlab_net
   
