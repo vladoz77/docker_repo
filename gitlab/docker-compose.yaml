@@ -34,7 +34,7 @@ services:
      - 2224:2224
     volumes:
     - /var/run/docker.sock:/var/run/docker.sock:ro
-    - ./traefik:/etc/traefik:ro
+    - ./traefik:/etc/traefik
     networks:
       - gitlab_net
 
