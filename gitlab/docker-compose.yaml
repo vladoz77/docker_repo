@@ -18,7 +18,7 @@ services:
       - gitlab_net
   
   gitlab:
-    image: gitlab/gitlab-ee:%{GITLAB_VERSION:-latest}
+    image: gitlab/gitlab-ee:${GITLAB_VERSION:-latest}
     container_name: gitlab
     restart: unless-stopped
     hostname: ${GITLAB_HOSTNAME}
