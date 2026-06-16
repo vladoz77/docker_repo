@@ -2,13 +2,12 @@ services:
   gitlab-init:
     image: alpine:latest
     container_name: gitlab-init
-    restart: unless-stopped
     env_file:
       - .env
     command: >
      sh -c "apk add --no-cache gettext &&
      envsubst < /templates/gitlab.rb.template > /etc/gitlab/gitlab.rb &&
-     envsubst < /templates/traefik.yml.template > /etc/traefik/traefik.yml &&
+     envsubst < /templates/traefik.yml.template > /result/traefik.yml &&
      echo 'gitlab.rb and traefik.yml generated successfully'"
     volumes:
     - ./gitlab/gitlab.rb.template:/templates/gitlab.rb.template:ro
