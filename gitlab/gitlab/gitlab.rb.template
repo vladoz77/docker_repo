@@ -1,6 +1,6 @@
 # Base config
-external_url %{GITLAB_HOSTNAME}
-gitlab_rails['initial_root_password'] = %{GITLAB_ROOT_PASSWORD}
+external_url '${GITLAB_EXTERNAL_URL}'
+gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
 
 # Config reverse proxy
 letsencrypt['enable'] = false
@@ -12,6 +12,3 @@ nginx['proxy_set_headers'] = {
   "X-Forwarded-Proto" => "https",
   "X-Forwarded-Ssl" => "on"
 }
-
-## SSH
-gitlab_rails['gitlab_shell_ssh_port'] = 2224
