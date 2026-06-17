@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     hostname: ${GITLAB_HOSTNAME}
     volumes:
-      - './gitlab/config:/etc/gitlab:ro'
+      - './gitlab/config:/etc/gitlab'
       - './gitlab/logs:/var/log/gitlab'
       - 'gitlab_data:/var/opt/gitlab'
     shm_size: '256m'
