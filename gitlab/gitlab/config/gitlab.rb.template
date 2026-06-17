@@ -15,3 +15,16 @@ nginx['proxy_set_headers'] = {
 
 ## SSH
 gitlab_rails['gitlab_shell_ssh_port'] = 2224
+
+## Yandex email config
+gitlab_rails['smtp_enable'] = true
+gitlab_rails['smtp_address'] = "${SMTP_ADDRESS}"
+gitlab_rails['smtp_port'] = 465
+gitlab_rails['smtp_user_name'] = "${SMTP_USER}"
+gitlab_rails['smtp_password'] = "${SMTP_PASSWORD}"
+gitlab_rails['smtp_domain'] = "${SMTP_DOMAIN}"
+gitlab_rails['gitlab_email_from'] = '${SMTP_USER}'
+gitlab_rails['smtp_authentication'] = "login"
+gitlab_rails['smtp_tls'] = true
+gitlab_rails['smtp_enable_starttls_auto'] = false
+gitlab_rails['smtp_openssl_verify_mode'] = 'peer'
