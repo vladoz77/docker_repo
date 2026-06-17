@@ -6,6 +6,6 @@ source .env
 set +a        
 
 envsubst < ./traefik/traefik.yml.template > ./traefik/traefik.yml
-envsubst < ./gitlab/gitlab.rb.template > ./gitlab/gitlab.rb
+envsubst < ./gitlab/config/gitlab.rb.template > ./gitlab/config/gitlab.rb
 
 docker compose up -d
