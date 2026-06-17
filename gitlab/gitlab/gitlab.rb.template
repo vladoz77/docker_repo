@@ -1,6 +1,6 @@
 # Base config
 external_url https://${GITLAB_HOSTNAME}
-gitlab_rails['initial_root_password'] = ${GITLAB_ROOT_PASSWORD}
+gitlab_rails['initial_root_password'] = '${GITLAB_ROOT_PASSWORD}'
 
 # Config reverse proxy
 letsencrypt['enable'] = false
