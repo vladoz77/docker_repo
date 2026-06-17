@@ -45,5 +45,7 @@ networks:
 
 volumes:
   gitlab_config:
+    name: gitlab_config
   gitlab_data:
+    name: gitlab_data
       
