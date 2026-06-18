@@ -241,6 +241,60 @@ docker compose logs -f gitlab
 docker compose logs -f postfix
 ```
 
+### Готовность GitLab
+
+GitLab после первого запуска может подниматься несколько минут. Проверить состояние контейнеров:
+
+```bash
+docker compose ps
+```
+
+Проверить health endpoint внутри контейнера:
+
+```bash
+docker compose exec gitlab gitlab-ctl status
+docker compose exec gitlab gitlab-rake gitlab:check SANITIZE=true
+```
+
+Проверить доступность GitLab через Traefik:
+
+```bash
+curl -I https://gitlab.example.com
+```
+
+Для своего сервера замените `gitlab.example.com` на значение `GITLAB_HOSTNAME`.
+
+### Проверка Postfix
+
+Проверить, что GitLab видит SMTP-порт Postfix внутри docker-сети:
+
+```bash
+docker compose exec gitlab bash -lc 'timeout 5 bash -c "</dev/tcp/postfix/587" && echo "postfix:587 is reachable"'
+```
+
+Посмотреть логи Postfix:
+
+```bash
+docker compose logs -f postfix
+```
+
+### Проверка отправки почты из GitLab
+
+Отправить тестовое письмо одной командой:
+
+```bash
+docker compose exec gitlab gitlab-rails runner "Notify.test_email('user@example.com', 'GitLab test email', 'SMTP delivery check').deliver_now"
+```
+
+Замените `user@example.com` на реальный внешний адрес. После отправки проверьте логи:
+
+```bash
+docker compose logs --tail=200 postfix
+docker compose logs --tail=200 gitlab
+```
+
+В логах Postfix успешная отправка обычно выглядит как `status=sent`. Ошибки доставки чаще всего связаны с закрытым исходящим портом `25`, неправильным SPF/DKIM/PTR или временной блокировкой на стороне получателя.
+
 Проверить права `acme.json`:
 
 ```bash
