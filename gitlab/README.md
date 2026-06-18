@@ -1,0 +1,274 @@
+# GitLab + Traefik + Postfix Relay
+
+Docker Compose проект для запуска GitLab CE за Traefik с Let's Encrypt и отдельным Postfix relay для исходящей почты GitLab.
+
+## Состав
+
+- `gitlab` - GitLab CE.
+- `traefik` - reverse proxy для HTTPS и TCP proxy для SSH.
+- `postfix` - send-only SMTP relay для писем GitLab с DKIM.
+
+GitLab доступен по HTTPS через Traefik. SSH GitLab публикуется на порту `2224`. Postfix не публикуется наружу и доступен только внутри docker-сети `gitlab_net`.
+
+## Требования
+
+- Docker и Docker Compose plugin.
+- Утилита `envsubst`.
+- Домен с DNS-доступом.
+- Открытые входящие порты `80`, `443`, `2224`.
+- Открытый исходящий порт `25` у хостера для доставки почты на внешние MX.
+
+## Быстрый старт
+
+1. Скопировать пример окружения:
+
+```bash
+cp .env.example .env
+```
+
+2. Заполнить `.env`.
+
+3. Запустить деплой:
+
+```bash
+./deploy.sh
+```
+
+Скрипт генерирует:
+
+- `traefik/traefik.yml` из `traefik/traefik.yml.template`
+- `gitlab/config/gitlab.rb` из `gitlab/config/gitlab.rb.template`
+- `traefik/acme.json` с правами `600`
+
+После этого выполняется `docker compose up -d`.
+
+## Переменные окружения
+
+### GitLab
+
+- `GITLAB_VERSION` - версия образа `gitlab/gitlab-ce`.
+- `GITLAB_HOSTNAME` - публичный hostname GitLab, например `gitlab.example.com`.
+- `GITLAB_ROOT_PASSWORD` - начальный пароль root-пользователя GitLab.
+
+### Traefik
+
+- `TRAEFIK_VERSION` - версия образа Traefik.
+- `TRAEFIK_ACME_EMAIL` - email для Let's Encrypt.
+
+### GitLab SMTP
+
+- `SMTP_DOMAIN` - домен отправки, например `example.com`.
+- `SMTP_EMAIL_FROM` - адрес отправителя GitLab, например `gitlab@example.com`.
+- `SMTP_DISPLAY_NAME` - отображаемое имя отправителя.
+
+### Postfix
+
+- `POSTFIX_HOSTNAME` - hostname почтового сервера, например `mail.example.com`.
+- `POSTFIX_ALLOWED_SENDER_DOMAINS` - домены, с которых postfix разрешает отправку.
+- `POSTFIX_DKIM_SELECTOR` - DKIM selector, обычно `mail`.
+- `POSTFIX_NETWORKS` - сети, которым разрешено отправлять через postfix.
+
+## Схема почты
+
+GitLab отправляет письма на `postfix:587` внутри docker-сети:
+
+```ruby
+gitlab_rails['smtp_address'] = "postfix"
+gitlab_rails['smtp_port'] = 587
+gitlab_rails['smtp_tls'] = false
+gitlab_rails['smtp_enable_starttls_auto'] = false
+```
+
+TLS между GitLab и Postfix не включен, потому что этот трафик идет внутри приватной docker-сети и SMTP-порт Postfix не опубликован наружу.
+
+Postfix дальше доставляет письма внешним почтовым серверам. Для этого у VPS должен быть открыт исходящий порт `25`.
+
+## DNS для почты
+
+Для нормальной доставки писем нужно настроить DNS для домена отправки. Ниже примеры для домена `devhomelab.site`, почтового hostname `mail.devhomelab.site` и IP `92.53.124.199`.
+
+### A запись
+
+Почтовый hostname должен указывать на IP сервера:
+
+| Поле | Значение |
+| --- | --- |
+| Имя | `mail` |
+| Тип | `A` |
+| Значение | `92.53.124.199` |
+| TTL | `600` |
+
+Для своего проекта подставьте IP вашего VPS. Полное имя записи получится `mail.example.com`.
+
+### MX запись
+
+MX указывает, какой сервер принимает почту для домена. Даже если проект в основном отправляет письма, MX полезен для репутации домена и корректной почтовой конфигурации.
+
+| Поле | Значение |
+| --- | --- |
+| Имя | `@` или `devhomelab.site.` |
+| Тип | `MX` |
+| Значение | `10 mail.devhomelab.site` |
+| TTL | `600` |
+
+`10` - приоритет MX. Чем меньше число, тем выше приоритет.
+
+### SPF запись
+
+SPF разрешает указанному серверу отправлять почту от имени домена:
+
+| Поле | Значение |
+| --- | --- |
+| Имя | `@` или `devhomelab.site.` |
+| Тип | `TXT` |
+| Значение | `"v=spf1 a mx ip4:92.53.124.199 -all"` |
+| TTL | `600` |
+
+Для своего сервера замените IP. Если хотите разрешить отправку только с `mail.example.com`, можно использовать более строгий вариант:
+
+```text
+"v=spf1 a:mail.example.com mx -all"
+```
+
+`-all` означает жесткий запрет отправки со всех остальных источников.
+
+### DKIM запись
+
+DKIM подтверждает, что письмо подписано вашим Postfix. Ключи создаются в директории `postfix/dkim` после первого запуска контейнера.
+
+После запуска найдите `.txt` файл:
+
+```bash
+ls postfix/dkim
+```
+
+Если selector равен `mail`, имя DNS-записи:
+
+| Поле | Значение |
+| --- | --- |
+| Имя | `mail._domainkey` |
+| Тип | `TXT` |
+| Значение | содержимое DKIM из `.txt` файла |
+| TTL | `600` |
+
+В DNS значение должно быть одной строкой без скобок и переносов, например:
+
+```text
+"v=DKIM1; h=sha256; k=rsa; s=email; p=PUBLIC_KEY"
+```
+
+Если в файле ключ разбит на несколько строк в кавычках, соедините части `p=` в одну длинную строку.
+
+### DMARC запись
+
+DMARC задает политику обработки писем, которые не прошли SPF/DKIM. Для мягкого старта можно использовать quarantine:
+
+| Поле | Значение |
+| --- | --- |
+| Имя | `_dmarc` |
+| Тип | `TXT` |
+| Значение | `"v=DMARC1; p=quarantine; rua=mailto:postmaster@devhomelab.site"` |
+| TTL | `600` |
+
+Для своего домена замените email в `rua`. Более мягкий вариант для первых тестов:
+
+```text
+"v=DMARC1; p=none; rua=mailto:postmaster@example.com"
+```
+
+После проверки доставки можно перейти на `p=quarantine`, а затем на `p=reject`.
+
+### PTR/rDNS
+
+У хостера VPS нужно настроить reverse DNS для IP сервера:
+
+```text
+92.53.124.199 -> mail.devhomelab.site
+```
+
+PTR/rDNS обычно настраивается не в DNS-панели домена, а в панели хостера или через обращение в поддержку.
+
+### Проверка через dig
+
+После добавления DNS-записей проверьте, что они резолвятся. Примеры для `devhomelab.site`:
+
+```bash
+dig +short A mail.devhomelab.site
+dig +short MX devhomelab.site
+dig +short TXT devhomelab.site
+dig +short TXT mail._domainkey.devhomelab.site
+dig +short TXT _dmarc.devhomelab.site
+dig +short -x 92.53.124.199
+```
+
+Ожидаемо:
+
+```text
+dig +short A mail.devhomelab.site
+92.53.124.199
+
+dig +short MX devhomelab.site
+10 mail.devhomelab.site.
+
+dig +short TXT devhomelab.site
+"v=spf1 a mx ip4:92.53.124.199 -all"
+
+dig +short TXT mail._domainkey.devhomelab.site
+"v=DKIM1; h=sha256; k=rsa; s=email; p=..."
+
+dig +short TXT _dmarc.devhomelab.site
+"v=DMARC1; p=quarantine; rua=mailto:postmaster@devhomelab.site"
+
+dig +short -x 92.53.124.199
+mail.devhomelab.site.
+```
+
+Если DNS недавно изменен, ответы могут появиться не сразу. При TTL `600` обычно стоит подождать 10-15 минут и повторить проверку.
+
+## Проверка
+
+Проверить итоговый compose:
+
+```bash
+docker compose config
+```
+
+Посмотреть логи:
+
+```bash
+docker compose logs -f traefik
+docker compose logs -f gitlab
+docker compose logs -f postfix
+```
+
+Проверить права `acme.json`:
+
+```bash
+stat -c '%a %n' traefik/acme.json
+```
+
+Ожидаемый режим:
+
+```text
+600 traefik/acme.json
+```
+
+## Права запуска
+
+`deploy.sh` не обязан запускаться от root. Пользователь должен:
+
+- иметь права записи в директорию проекта;
+- иметь право менять режим `traefik/acme.json`;
+- иметь доступ к Docker socket.
+
+Обычно это root через `sudo ./deploy.sh` или отдельный пользователь в группе `docker`, владеющий директорией проекта.
+
+## Важные файлы
+
+- `docker-compose.yaml` - сервисы и сети.
+- `.env.example` - пример переменных окружения.
+- `deploy.sh` - генерация конфигов и запуск compose.
+- `traefik/traefik.yml.template` - шаблон Traefik.
+- `gitlab/config/gitlab.rb.template` - шаблон GitLab Omnibus config.
+- `traefik/acme.json` - хранилище сертификатов Let's Encrypt.
+- `postfix/dkim` - DKIM-ключи Postfix.

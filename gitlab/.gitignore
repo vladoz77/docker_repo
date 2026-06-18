@@ -1,1 +1,4 @@
 .env
+gitlab/config/gitlab.rb
+traefik/traefik.yml
+postfix/dkim/

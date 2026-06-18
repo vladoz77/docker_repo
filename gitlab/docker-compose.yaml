@@ -23,6 +23,24 @@ services:
       - traefik.tcp.services.gitlab-ssh.loadbalancer.server.port=22
     networks:
       - gitlab_net
+
+  postfix:
+    image: boky/postfix
+    container_name: postfix
+    hostname: ${POSTFIX_HOSTNAME}
+    restart: unless-stopped
+    volumes:
+      - ./postfix/dkim:/etc/opendkim/keys
+    environment:
+      HOSTNAME: ${POSTFIX_HOSTNAME}
+      ALLOWED_SENDER_DOMAINS: ${POSTFIX_ALLOWED_SENDER_DOMAINS}
+      DKIM_SELECTOR: ${POSTFIX_DKIM_SELECTOR}
+      ENABLE_DKIM: "1"
+      DKIM_AUTOGENERATE: "true"
+      LOG_TO_STDOUT: "1"
+      MYNETWORKS: ${POSTFIX_NETWORKS}
+    networks:
+      - gitlab_net
   
   traefik:
     image: traefik:${TRAEFIK_VERSION:-latest}
