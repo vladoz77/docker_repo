@@ -23,6 +23,16 @@ services:
       - traefik.tcp.services.gitlab-ssh.loadbalancer.server.port=22
     networks:
       - gitlab_net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/-/readiness || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   postfix:
     image: boky/postfix
@@ -41,7 +51,39 @@ services:
       MYNETWORKS: ${POSTFIX_NETWORKS}
     networks:
       - gitlab_net
-  
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-latest}
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gitlab_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:${REDIS_VERSION:-latest}
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gitlab_net
+
   traefik:
     image: traefik:${TRAEFIK_VERSION:-latest}
     container_name: traefik
@@ -64,4 +106,8 @@ networks:
 volumes:
   gitlab_data:
     name: gitlab_data
+  postgres_data:
+    name: postgres_data
+  redis_data:
+    name: redis_data
       
