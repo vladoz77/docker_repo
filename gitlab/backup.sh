@@ -10,7 +10,7 @@ BACKUP_RETENTION_DAYS=7
 
 # Create backups directory if it doesn't exist
 echo "Creating backup directories..."
-mkdir -p $BACKUP_DIR/{gitlab,gitlab-config,postgres,traefik-config}
+mkdir -p $BACKUP_DIR/{gitlab,gitlab-config,postgres,traefik}
 
 # Backup gitlab data 
 echo "Creating GitLab backup..."
@@ -18,7 +18,7 @@ docker compose exec -T gitlab gitlab-backup create
 
 # Backup gitlab configuration files
 echo "Creating GitLab configuration backup..."
-tar -czf "$BACKUP_DIR/gitlab-config-${TIMESTAMP}.tar.gz" \
+tar -czf "$BACKUP_DIR/gitlab-config/gitlab-${TIMESTAMP}.tar.gz" \
   ./gitlab/config/gitlab.rb \
   ./gitlab/config/gitlab-secrets.json
 
@@ -32,7 +32,7 @@ docker compose exec -T postgres pg_dump \
 
 # Backup traefik configuration files
 echo "Creating Traefik configuration backup..."
-tar -czf "$BACKUP_DIR/traefik-config-${TIMESTAMP}.tar.gz" \
+tar -czf "$BACKUP_DIR/traefik/traefik-${TIMESTAMP}.tar.gz" \
   ./traefik/traefik.yml \
   ./traefik/acme.json
 
