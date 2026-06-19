@@ -11,4 +11,4 @@ envsubst < ./gitlab/config/gitlab.rb.template > ./gitlab/config/gitlab.rb
 touch ./traefik/acme.json
 chmod 600 ./traefik/acme.json
 
-docker compose up -d
+docker compose pull && docker compose up -d
