@@ -1,21 +1,21 @@
 #!/bin/bash
 set -euo pipefail
-set -a
-source .env
-set +a
 
 BACKUP_DIR="./backups"
 
 echo "=== Choose GitLab backup ==="
 select GITLAB_BACKUP in "$BACKUP_DIR"/gitlab/*; do
-  [[ -n "$GITLAB_BACKUP" ]] && break
+  if [[ -n "$GITLAB_BACKUP" ]]; then
+    break
+  fi
   echo "Invalid selection"
 done
 
-echo ""
 echo "=== Choose Config backup ==="
 select CONFIG_BACKUP in "$BACKUP_DIR"/gitlab-config/*; do
-  [[ -n "$CONFIG_BACKUP" ]] && break
+  if [[ -n "$CONFIG_BACKUP" ]]; then
+    break
+  fi
   echo "Invalid selection"
 done
 
@@ -27,16 +27,16 @@ echo "Config backup : $CONFIG_BACKUP"
 read -rp "Continue? [y/N]: " confirm
 [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
 
-echo "[1/3] Восстанавливаем конфиг..."
+echo "[1/3] Restoring config..."
 tar -xzf "$CONFIG_BACKUP" --strip-components=1 -C ./gitlab/config/
 
-echo "[2/3] Запускаем restore..."
+echo "[2/3] Starting restore..."
 docker compose exec -T gitlab gitlab-ctl stop puma
 docker compose exec -T gitlab gitlab-ctl stop sidekiq
 docker compose exec -T gitlab gitlab-backup restore BACKUP="$BACKUP_ID" force=yes
 
-echo "[3/3] Перезапускаем GitLab..."
+echo "[3/3] Restarting GitLab..."
 docker compose exec -T gitlab gitlab-ctl reconfigure
 docker compose exec -T gitlab gitlab-ctl restart
 
-echo "Готово!"
+echo "Done!"
