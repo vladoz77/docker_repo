@@ -1,39 +1,120 @@
-version: '3.6'
 services:
   gitlab:
-    image: gitlab/gitlab-ce:15.11.11-ce.0
-    restart: unless-stopped
-    hostname: gitlab.home.local
+    image: gitlab/gitlab-ce:${GITLAB_VERSION:-latest}
     container_name: gitlab
-    environment:
-       GITLAB_OMNIBUS_CONFIG: |
-         external_url 'http://gitlab.home.local' 
-    ports:
-      - '8088:80'
-      - '8443:443'
-      - '22:22'
+    restart: unless-stopped
+    hostname: ${GITLAB_HOSTNAME}
     volumes:
-      - '/opt/gitlab/config:/etc/gitlab'
-      - '/opt/gitlab/logs:/var/log/gitlab'
-      - '/opt/gitlab/data:/var/opt/gitlab'
+      - './gitlab/config:/etc/gitlab'
+      - './gitlab/logs:/var/log/gitlab'
+      - './backups/gitlab:/var/opt/gitlab/backups'
+      - 'gitlab_data:/var/opt/gitlab'
+    shm_size: '256m'
+    labels:
+      - traefik.enable=true
+      # Gitlab router
+      - traefik.http.routers.gitlab.rule=Host(`${GITLAB_HOSTNAME}`)
+      - traefik.http.routers.gitlab.entrypoints=websecure
+      - traefik.http.routers.gitlab.tls=true
+      - traefik.http.routers.gitlab.tls.certresolver=le
+      - traefik.http.services.gitlab.loadbalancer.server.port=80
+      # Ssh router
+      - traefik.tcp.routers.gitlab-ssh.entrypoints=ssh
+      - traefik.tcp.routers.gitlab-ssh.rule=HostSNI(`*`)
+      - traefik.tcp.services.gitlab-ssh.loadbalancer.server.port=22
     networks:
-      - ngix-manager_default
+      - gitlab_net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost/-/readiness || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postfix:
+    image: boky/postfix
+    container_name: postfix
+    hostname: ${POSTFIX_HOSTNAME}
+    restart: unless-stopped
+    volumes:
+      - ./postfix/dkim:/etc/opendkim/keys
+    environment:
+      HOSTNAME: ${POSTFIX_HOSTNAME}
+      ALLOWED_SENDER_DOMAINS: ${POSTFIX_ALLOWED_SENDER_DOMAINS}
+      DKIM_SELECTOR: ${POSTFIX_DKIM_SELECTOR}
+      ENABLE_DKIM: "1"
+      DKIM_AUTOGENERATE: "true"
+      LOG_TO_STDOUT: "1"
+      MYNETWORKS: ${POSTFIX_NETWORKS}
+    networks:
       - gitlab_net
 
-  gitlab-runner:
-   container_name: gitlab-runner
-   image: gitlab/gitlab-runner:latest
-   restart: always
-   volumes:
-     - '/opt/gitlab-runner/config:/etc/gitlab-runner'
-     - '/var/run/docker.sock:/var/run/docker.sock:rw'
-   networks:
-     - gitlab_net
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-latest}
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - gitlab_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:${REDIS_VERSION:-latest}
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gitlab_net
+
+  traefik:
+    image: traefik:${TRAEFIK_VERSION:-latest}
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+     - 80:80
+     - 443:443
+     - ${SSH_PORT}:${SSH_PORT}
+    volumes:
+    - /var/run/docker.sock:/var/run/docker.sock:ro
+    - ./traefik:/etc/traefik
+    networks:
+      - gitlab_net
 
 networks:
-  ngix-manager_default:
-    external: true
   gitlab_net:
+    name: gitlab_net
+    driver: bridge
 
-
-
+volumes:
+  gitlab_data:
+    name: gitlab_data
+  postgres_data:
+    name: postgres_data
+  redis_data:
+    name: redis_data
+      
