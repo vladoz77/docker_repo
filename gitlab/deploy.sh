@@ -5,8 +5,9 @@ set -a
 source .env   
 set +a        
 
-envsubst < ./traefik/traefik.yml.template > ./traefik/traefik.yml
-envsubst < ./gitlab/config/gitlab.rb.template > ./gitlab/config/gitlab.rb
+mkdir -p ./gitlab/config ./traefik
+envsubst < ./templates/traefik.yml.template > ./traefik/traefik.yml
+envsubst < ./templates/gitlab.rb.template > ./gitlab/config/gitlab.rb
 
 touch ./traefik/acme.json
 chmod 600 ./traefik/acme.json

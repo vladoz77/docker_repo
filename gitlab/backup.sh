@@ -15,8 +15,9 @@ docker compose exec -T gitlab gitlab-backup create
 # Backup gitlab configuration files
 echo "Creating GitLab configuration backup..."
 tar -czf "$BACKUP_DIR/gitlab-config/gitlab-${TIMESTAMP}.tar.gz" \
-  ./gitlab/config/gitlab.rb \
-  ./gitlab/config/gitlab-secrets.json
+  -C ./gitlab/config \
+  gitlab.rb \
+  gitlab-secrets.json
 
 # Backup .env file
 echo "Creating .env backup..."
