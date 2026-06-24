@@ -1,5 +1,1 @@
 .env
-gitlab/config/gitlab.rb
-traefik/traefik.yml
-traefik/acme.json
-postfix/dkim/

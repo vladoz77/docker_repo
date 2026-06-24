@@ -29,7 +29,7 @@
 
   # Create restore directory if it doesn't exist
   echo "Creating restore directory..."
-  mkdir -p "$RESTORE_DIR"/{gitlab,gitlab-config}
+  mkdir -p "$RESTORE_DIR"
 
   # Restore $RESTORE_DIR from s3 with restic
   restic_cmd() {
@@ -44,26 +44,21 @@
       "$@"
   }
 
-  restic_cmd restore latest --target /data --tag gitlab-backup
+  restic_cmd snapshots
+  read -rp "Enter Snapshot ID [latest]: " SNAPSHOT_ID
+  SNAPSHOT_ID=${SNAPSHOT_ID:-latest}
+
+  restic_cmd restore "$SNAPSHOT_ID" --target /data
   
-  GITLAB_BACKUP=$(ls -t "$RESTORE_DIR/data/gitlab"/*_gitlab_backup.tar | head -n1)
+  GITLAB_BACKUP=$(ls -t "$RESTORE_DIR/data/backups"/*_gitlab_backup.tar | head -n1)
   BACKUP_ID=$(basename "$GITLAB_BACKUP" | sed 's/_gitlab_backup\.tar$//')
-  CONFIG_BACKUP=$(ls -t "$RESTORE_DIR/data/gitlab-config"/*.tar.gz | head -n1)
 
-  echo ""
-  echo "GitLab backup : $GITLAB_BACKUP"
-  echo "Config backup : $CONFIG_BACKUP"
-  read -rp "Continue? [y/N]: " confirm
-  [[ "$confirm" =~ ^[Yy]$ ]] || { echo "Cancelled."; exit 0; }
-
-  echo "Restoring config..."
-  tar -xzf "$CONFIG_BACKUP"  -C "${GITLAB_DIR}"/config
+  echo "Copy gitlab config to ${GITLAB_DIR}"
+  cp -a "$RESTORE_DIR/data/config/." "${GITLAB_DIR}/config/"
   echo "done"
 
-  echo "Moving GitLab backup to volume..."
-  mv "$GITLAB_BACKUP" "$GITLAB_DIR"/backups
-  
-  echo "Fix permission"
+  echo "Copy gitlab backup to ${GITLAB_DIR} and fix permissions" 
+  cp -a "$RESTORE_DIR/data/backups/." "$GITLAB_DIR/backups/"
   chown 998:998 "$GITLAB_DIR"/backups/*.tar
   chmod 644 "$GITLAB_DIR"/backups/*.tar
 
