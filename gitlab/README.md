@@ -1,84 +1,99 @@
-# GitLab + Traefik + Postfix Relay
+# GitLab CE + Traefik + Postfix + PostgreSQL + Redis
 
-Docker Compose проект для запуска GitLab CE за Traefik с Let's Encrypt и отдельным Postfix relay для исходящей почты GitLab.
+Этот репозиторий содержит Docker Compose-стек для запуска GitLab Community Edition за Traefik с HTTPS, отдельным SMTP relay на Postfix и внешними сервисами PostgreSQL и Redis.
 
-## Состав
+## Что входит в стек
 
-- `gitlab` - GitLab CE.
-- `traefik` - reverse proxy для HTTPS и TCP proxy для SSH.
-- `postfix` - send-only SMTP relay для писем GitLab с DKIM.
+- GitLab CE в контейнере `gitlab`
+- Traefik в контейнере `traefik` с HTTP/HTTPS и TCP SSH proxy
+- Postfix в контейнере `postfix` для исходящей почты GitLab с DKIM
+- PostgreSQL в контейнере `postgres`
+- Redis в контейнере `redis`
 
-GitLab доступен по HTTPS через Traefik. SSH GitLab публикуется на порту из переменной `SSH_PORT`. Postfix не публикуется наружу и доступен только внутри docker-сети `gitlab_net`.
+GitLab доступен по HTTPS через Traefik, SSH GitLab публикуется на порту из переменной `SSH_PORT`, а Postfix работает только внутри docker-сети.
 
 ## Требования
 
-- Docker и Docker Compose plugin.
-- Утилита `envsubst`.
-- Домен с DNS-доступом.
-- Открытые входящие порты `80`, `443` и значение `SSH_PORT`.
-- Открытый исходящий порт `25` у хостера для доставки почты на внешние MX.
+- Docker Engine с Docker Compose plugin
+- Утилита `envsubst`
+- DNS-записи для домена GitLab и почтового hostname
+- Открытые входящие порты `80`, `443` и `SSH_PORT`
+- Открытый исходящий TCP/25 для доставки почты
+- Для скрипта регистрации раннера: `curl`, `jq`, пакет `gitlab-runner` и действительный GitLab PAT
+
+## Структура проекта
+
+- [docker-compose.yaml](https://github.com/vladoz77/docker_repo/blob/master/gitlab/docker-compose.yaml) — описание сервисов и сетей
+- [gitlab-deploy.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-deploy.sh) — генерация конфигов и запуск стека
+- [gitlab-backup.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-backup.sh) — создание резервной копии GitLab и выгрузка в Restic
+- [gitlab-restore.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-restore.sh) — восстановление из Restic и запуск `gitlab-backup restore`
+- [gitlab-runner.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-runner.sh) — создание инстанс-раннера в GitLab, установка `gitlab-runner` и регистрация
+- [templates/gitlab.rb.template](https://github.com/vladoz77/docker_repo/blob/master/gitlab/templates/gitlab.rb.template) — шаблон конфигурации GitLab
+- [templates/traefik.yml.template](https://github.com/vladoz77/docker_repo/blob/master/gitlab/templates/traefik.yml.template) — шаблон конфигурации Traefik
 
 ## Быстрый старт
 
-1. Скопировать пример окружения:
+1. Скопируйте пример окружения:
 
 ```bash
 cp .env.example .env
 ```
 
-2. Заполнить `.env`.
+2. Отредактируйте `.env` под ваш сервер и домены.
 
-3. Запустить деплой:
+3. Сделайте скрипты исполняемыми:
 
 ```bash
-./deploy.sh
+chmod +x gitlab-deploy.sh gitlab-backup.sh gitlab-restore.sh gitlab-runner.sh
 ```
 
-Скрипт генерирует:
+4. Запустите деплой:
 
-- `traefik/traefik.yml` из `traefik/traefik.yml.template`
-- `gitlab/config/gitlab.rb` из `gitlab/config/gitlab.rb.template`
-- `traefik/acme.json` с правами `600`
+```bash
+./gitlab-deploy.sh
+```
 
-После этого выполняется `docker compose pull && docker compose up -d`.
+Скрипт выполняет следующие действия:
+
+- генерирует [templates/traefik.yml.template](https://github.com/vladoz77/docker_repo/blob/master/gitlab/templates/traefik.yml.template) → `traefik/traefik.yml`
+- генерирует [templates/gitlab.rb.template](https://github.com/vladoz77/docker_repo/blob/master/gitlab/templates/gitlab.rb.template) → `gitlab/config/gitlab.rb`
+- создаёт `traefik/acme.json` с правами `600`
+- запускает `docker compose pull && docker compose up -d`
 
 ## Переменные окружения
 
 ### GitLab
 
-- `GITLAB_VERSION` - версия образа `gitlab/gitlab-ce`.
-- `GITLAB_HOSTNAME` - публичный hostname GitLab, например `gitlab.example.com`.
-- `GITLAB_ROOT_PASSWORD` - начальный пароль root-пользователя GitLab.
-- `SSH_PORT` - внешний SSH-порт GitLab, например `2222`.
+- `GITLAB_VERSION` — версия образа `gitlab/gitlab-ce`
+- `GITLAB_HOSTNAME` — публичный hostname GitLab
+- `GITLAB_ROOT_PASSWORD` — пароль root пользователя GitLab
+- `SSH_PORT` — внешний SSH-порт GitLab
 
 ### Traefik
 
-- `TRAEFIK_VERSION` - версия образа Traefik.
-- `TRAEFIK_ACME_EMAIL` - email для Let's Encrypt.
+- `TRAEFIK_VERSION` — версия образа Traefik
+- `TRAEFIK_ACME_EMAIL` — email для Let's Encrypt
 
-### GitLab SMTP
+### SMTP / Postfix
 
-- `SMTP_DOMAIN` - домен отправки, например `example.com`.
-- `SMTP_HOST` - SMTP-хост внутри docker-сети, обычно `postfix`.
-- `SMTP_PORT` - SMTP-порт внутри docker-сети, обычно `587`.
-- `SMTP_EMAIL_FROM` - адрес отправителя GitLab, например `gitlab@example.com`.
-- `SMTP_DISPLAY_NAME` - отображаемое имя отправителя.
-
-### Postfix
-
-- `POSTFIX_HOSTNAME` - hostname почтового сервера, например `mail.example.com`.
-- `POSTFIX_ALLOWED_SENDER_DOMAINS` - домены, с которых postfix разрешает отправку.
-- `POSTFIX_DKIM_SELECTOR` - DKIM selector, обычно `mail`.
-- `POSTFIX_NETWORKS` - сети, которым разрешено отправлять через postfix.
+- `SMTP_HOST` — SMTP-хост внутри docker-сети, обычно `postfix`
+- `SMTP_PORT` — SMTP-порт внутри docker-сети, обычно `587`
+- `SMTP_DOMAIN` — домен отправки почты
+- `SMTP_EMAIL_FROM` — адрес отправителя
+- `SMTP_DISPLAY_NAME` — отображаемое имя отправителя
+- `POSTFIX_HOSTNAME` — hostname Postfix/почтового сервера
+- `POSTFIX_ALLOWED_SENDER_DOMAINS` — разрешённые домены отправки
+- `POSTFIX_DKIM_SELECTOR` — selector DKIM
+- `POSTFIX_NETWORKS` — сети, которым разрешено отправлять почту через Postfix
 
 ### PostgreSQL
 
-- `POSTGRES_VERSION` - версия образа PostgreSQL.
-- `POSTGRES_HOST` - hostname PostgreSQL внутри docker-сети, обычно `postgres`.
-- `DB_USERNAME` - пользователь базы GitLab.
-- `DB_PASSWORD` - пароль пользователя базы GitLab.
-- `DB_PORT` - порт PostgreSQL внутри docker-сети, обычно `5432`.
-- `DB_NAME` - имя базы GitLab, обычно `gitlabhq_production`.
+- `POSTGRES_VERSION` — версия образа PostgreSQL
+- `POSTGRES_HOST` — hostname сервера PostgreSQL внутри сети
+- `DB_USERNAME` — пользователь базы
+- `DB_PASSWORD` — пароль базы
+- `DB_PORT` — порт PostgreSQL
+- `DB_NAME` — имя базы GitLab
 
 ### Redis
 
@@ -243,15 +258,15 @@ mail.devhomelab.site.
 
 Если DNS недавно изменен, ответы могут появиться не сразу. При TTL `600` обычно стоит подождать 10-15 минут и повторить проверку.
 
-## Проверка
+## Проверка после деплоя
 
-Проверить итоговый compose:
+Проверка конфигурации:
 
 ```bash
 docker compose config
 ```
 
-Посмотреть логи:
+Просмотр логов:
 
 ```bash
 docker compose logs -f traefik
@@ -259,60 +274,31 @@ docker compose logs -f gitlab
 docker compose logs -f postfix
 ```
 
-### Готовность GitLab
-
-GitLab после первого запуска может подниматься несколько минут. Проверить состояние контейнеров:
+Проверка статуса контейнеров:
 
 ```bash
 docker compose ps
 ```
 
-Проверить health endpoint внутри контейнера:
+Проверка готовности GitLab:
 
 ```bash
 docker compose exec gitlab gitlab-ctl status
 ```
 
-Проверить доступность GitLab через Traefik:
+Проверка доступности сайта:
 
 ```bash
-curl -I https://gitlab.example.com
+curl -I https://your-gitlab-hostname
 ```
 
-Для своего сервера замените `gitlab.example.com` на значение `GITLAB_HOSTNAME`.
-
-### Проверка Postfix
-
-Проверить, что GitLab видит SMTP-порт Postfix внутри docker-сети:
+Проверка доступа к SMTP внутри сети:
 
 ```bash
 docker compose exec gitlab bash -lc 'timeout 5 bash -c "</dev/tcp/postfix/587" && echo "postfix:587 is reachable"'
 ```
 
-Посмотреть логи Postfix:
-
-```bash
-docker compose logs -f postfix
-```
-
-### Проверка отправки почты из GitLab
-
-Отправить тестовое письмо одной командой:
-
-```bash
-docker compose exec gitlab gitlab-rails runner "Notify.test_email('user@example.com', 'GitLab test email', 'SMTP delivery check').deliver_now"
-```
-
-Замените `user@example.com` на реальный внешний адрес. После отправки проверьте логи:
-
-```bash
-docker compose logs --tail=200 postfix
-docker compose logs --tail=200 gitlab
-```
-
-В логах Postfix успешная отправка обычно выглядит как `status=sent`. Ошибки доставки чаще всего связаны с закрытым исходящим портом `25`, неправильным SPF/DKIM/PTR или временной блокировкой на стороне получателя.
-
-Проверить права `acme.json`:
+Проверка права `acme.json`:
 
 ```bash
 stat -c '%a %n' traefik/acme.json
@@ -326,89 +312,94 @@ stat -c '%a %n' traefik/acme.json
 
 ## Бэкапы
 
-Для резервного копирования используется `backup.sh`. Скрипт запускается на хосте и выполняет команды внутри контейнеров через `docker compose exec`.
+Скрипт [gitlab-backup.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-backup.sh) выполняет резервное копирование следующим образом:
 
-Что сохраняется:
+- создаёт штатную резервную копию GitLab через `gitlab-backup create`
+- архивирует конфигурацию GitLab и каталог бэкапов
+- отправляет данные в Restic в удалённое хранилище
 
-- штатный GitLab backup в `./backups/gitlab`;
-- архив конфигов GitLab: `gitlab/config/gitlab.rb` и `gitlab/config/gitlab-secrets.json`;
-- отдельный PostgreSQL dump в custom format `pg_dump -Fc`;
-- архив конфигов Traefik: `traefik/traefik.yml` и `traefik/acme.json`.
+Для работы скрипта должны быть заданы переменные окружения:
 
-Перед первым запуском сделайте скрипт исполняемым:
-
-```bash
-chmod +x backup.sh
-```
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `RESTIC_PASSWORD`
+- `RESTIC_REPOSITORY`
 
 Запуск:
 
 ```bash
-./backup.sh
+./gitlab-backup.sh
 ```
 
-GitLab backup складывается в директорию, проброшенную в контейнер:
+Скрипт хранит резервные копии в Restic с ротацией:
 
-```yaml
-- './backups/gitlab:/var/opt/gitlab/backups'
-```
+- ежедневно — 7 снимков
+- еженедельно — 4 снимка
+- ежемесячно — 12 снимков
 
-PostgreSQL dump создается отдельно:
+## Восстановление
+
+Скрипт [gitlab-restore.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-restore.sh) выполняет восстановление из Restic:
+
+1. восстанавливает данные в временную директорию
+2. копирует конфигурацию GitLab в `./gitlab/config`
+3. копирует архивы бэкапов в `./gitlab/backups`
+4. останавливает GitLab процессы
+5. запускает `gitlab-backup restore`
+6. выполняет `gitlab-ctl reconfigure` и `gitlab-ctl restart`
+
+Запуск:
 
 ```bash
-docker compose exec -T postgres pg_dump \
-  -U "$DB_USERNAME" \
-  -d "$DB_NAME" \
-  -Fc \
-  > "./backups/postgres/gitlab-db-YYYY-MM-DD_HH-MM.dump"
+./gitlab-restore.sh
 ```
 
-Этот dump нужен как дополнительная страховка. Основным способом восстановления GitLab остается штатный GitLab backup вместе с `gitlab-secrets.json`.
+Перед восстановлением убедитесь, что у вас есть актуальные бэкапы и конфиг `gitlab-secrets.json`.
 
-### Важные файлы для восстановления
+## Регистрация GitLab Runner
 
-Обязательно сохраняйте:
+Скрипт [gitlab-runner.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-runner.sh) выполняет полный цикл для создания раннера:
 
-- `./backups/gitlab/*_gitlab_backup.tar`;
-- `./gitlab/config/gitlab-secrets.json`;
-- `./gitlab/config/gitlab.rb`;
-- `./traefik/acme.json`;
-- `.env`.
+1. создаёт инстанс-раннер в GitLab через API
+2. устанавливает `gitlab-runner` на хосте
+3. регистрирует раннер с executor `shell`
 
-`gitlab-secrets.json` критичен для восстановления: без него могут не расшифроваться токены, CI variables, runner secrets и другие чувствительные данные GitLab.
+Перед запуском нужно отредактировать скрипт и задать:
 
-`traefik/acme.json` содержит ACME account key и сертификаты Let's Encrypt. При потере Traefik сможет выпустить сертификаты заново, но можно упереться в rate limits Let's Encrypt.
+- `GITLAB_URL`
+- `PAT_TOKEN`
+- `RUNNER_TAGS` при необходимости
 
-### Ротация
-
-В `backup.sh` используется локальная ротация через `find`:
+Запуск:
 
 ```bash
-BACKUP_RETENTION_DAYS=7
-find "$BACKUP_DIR" -type f -mtime +"$BACKUP_RETENTION_DAYS" -exec rm -f {} \;
+sudo ./gitlab-runner.sh
 ```
 
-По умолчанию удаляются локальные файлы старше 7 дней. Если нужно хранить бэкапы дольше, измените `BACKUP_RETENTION_DAYS`.
+> Скрипт должен запускаться от root, потому что устанавливает пакет и регистрирует сервис `gitlab-runner`.
 
-## Права запуска
+## Права доступа
 
-`deploy.sh` и `backup.sh` не обязаны запускаться от root. Пользователь должен:
+Скрипты не требуют запуска от root, кроме [gitlab-runner.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-runner.sh). Для нормальной работы пользователю нужно:
 
-- иметь права записи в директорию проекта;
-- иметь право менять режим `traefik/acme.json`;
-- иметь доступ к Docker socket.
+- иметь доступ к Docker socket
+- иметь права записи в каталог проекта
+- иметь право менять режим `traefik/acme.json`
 
 Обычно это root через `sudo ./deploy.sh` / `sudo ./backup.sh` или отдельный пользователь в группе `docker`, владеющий директорией проекта.
 
 ## Важные файлы
 
-- `docker-compose.yaml` - сервисы и сети.
-- `.env.example` - пример переменных окружения.
-- `deploy.sh` - генерация конфигов и запуск compose.
-- `backup.sh` - создание локальных бэкапов GitLab, PostgreSQL и Traefik.
-- `traefik/traefik.yml.template` - шаблон Traefik.
-- `gitlab/config/gitlab.rb.template` - шаблон GitLab Omnibus config.
-- `traefik/acme.json` - хранилище сертификатов Let's Encrypt.
-- `postfix/dkim` - DKIM-ключи Postfix.
-- `backups/gitlab` - штатные GitLab backup archives.
-- `backups/postgres` - отдельные PostgreSQL dumps.
+- [docker-compose.yaml](https://github.com/vladoz77/docker_repo/blob/master/gitlab/docker-compose.yaml) — описание сервисов и сетей.
+- [.env.example](https://github.com/vladoz77/docker_repo/blob/master/gitlab/.env.example) — пример переменных окружения.
+- [gitlab-deploy.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-deploy.sh) — генерация конфигов и запуск compose.
+- [gitlab-backup.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-backup.sh) — создание резервных копий GitLab и выгрузка в Restic.
+- [gitlab-restore.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-restore.sh) — восстановление данных из Restic.
+- [gitlab-runner.sh](https://github.com/vladoz77/docker_repo/blob/master/gitlab/gitlab-runner.sh) — создание и регистрация GitLab Runner.
+- [templates/traefik.yml.template](https://github.com/vladoz77/docker_repo/blob/master/gitlab/templates/traefik.yml.template) — шаблон Traefik.
+- [templates/gitlab.rb.template](https://github.com/vladoz77/docker_repo/blob/master/gitlab/templates/gitlab.rb.template) — шаблон конфигурации GitLab.
+- `traefik/acme.json` — файл с сертификатами Let's Encrypt, создаётся при первом деплое.
+- `gitlab/config/gitlab.rb` — сгенерированная конфигурация GitLab, создаётся скриптом деплоя.
+- `traefik/traefik.yml` — сгенерированная конфигурация Traefik, создаётся скриптом деплоя.
+- `gitlab/backups` — каталог для штатных GitLab backup-архивов.
+- `postfix/dkim` — каталог с DKIM-ключами Postfix, создаётся после первого запуска контейнера.
