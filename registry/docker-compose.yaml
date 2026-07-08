@@ -1,21 +1,44 @@
 services:
-  registry:
-    image: registry:2
-    container_name: local-registry
-    restart: on-failure
+  docker-registry:
+    image: registry:3
+    container_name: docker-registry
+    restart: unless-stopped
     ports:
       - "5000:5000"
-    environment:
-      - REGISTRY_PROXY_USERNAME=${DOCKER_USER}
-      - REGISTRY_PROXY_PASSWORD=${DOCKER_PASSWORD}
     volumes:
-      - ./config:/etc/docker/registry
-      - registry_data:/var/lib/registry
+      - ./config/docker.yml:/etc/docker/registry/config.yml:ro
+      - docker_data:/var/lib/registry
     networks:
       - local-registry
 
+  quay-registry:
+    image: registry:3
+    container_name: quay-registry
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./config/quay.yml:/etc/docker/registry/config.yml:ro
+      - quay_data:/var/lib/registry
+    networks:
+      - local-registry
+
+  ghcr-registry:
+    image: registry:3
+    container_name: ghcr-registry
+    restart: unless-stopped
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./config/ghcr.yml:/etc/docker/registry/config.yml:ro
+      - ghcr_data:/var/lib/registry
+    networks:
+      - local-regi\stry
+
 volumes:
-  registry_data:
+  docker_data:
+  ghcr_data:
+  quay_data:
 
 networks:
   local-registry:

@@ -1,246 +1,175 @@
-# Docker Registry Proxy
+# Docker Registry Proxy Cluster
 
-Локальный реестр Docker с прокси к официальному Docker Hub для кеширования и управления Docker образами.
+Локальный набор Docker Registry v2 для работы с несколькими удалёнными реестрами через прокси. Проект позволяет запускать независимые экземпляры реестра для Docker Hub, GitHub Container Registry и Quay с отдельными портами и томами.
 
-## Описание
+## Что входит в проект
 
-Этот проект развертывает Docker Registry v2 с конфигурацией прокси. Реестр позволяет:
+Проект запускает три отдельных контейнера:
 
-- **Кеширование образов** — скачанные образы хранятся локально
-- **Прокси к Docker Hub** — автоматическое перенаправление запросов к официальному реестру
-- **Аутентификация** — подключение к Docker Hub с вашими учетными данными
-- **Локальная сеть** — изолированная Docker сеть для работы контейнеров
+- Docker Hub proxy — доступен на `http://localhost:5000`
+- Quay proxy — доступен на `http://localhost:5001`
+- GHCR proxy — доступен на `http://localhost:5002`
+
+Каждый экземпляр использует собственный конфигурационный файл и том данных.
 
 ## Требования
 
-- [Docker](https://docs.docker.com/get-docker/)
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- Docker
+- Docker Compose v2
 
 ## Структура проекта
 
-```
+```text
 .
-├── docker-compose.yaml    # Конфигурация Docker Compose
+├── docker-compose.yaml
 ├── config/
-│   └── config.yml         # Конфигурация Docker Registry
-├── .env                   # Переменные окружения (не коммитить!)
-└── .gitignore             # Игнорирование файлов
+│   ├── docker.yml
+│   ├── ghcr.yml
+│   └── quay.yml
+└── README.md
 ```
 
-## Установка и запуск
+## Быстрый старт
 
-### 1. Настройка переменных окружения
-
-Создайте файл `.env` в корневой папке проекта или обновите существующий с вашими учетными данными Docker Hub:
+### 1. Запустить контейнеры
 
 ```bash
-DOCKER_USER=your_username
-DOCKER_PASSWORD=your_docker_pat_or_password
+docker compose up -d
 ```
 
-**⚠️ Важно:** Используйте Personal Access Token (PAT) вместо пароля для лучшей безопасности.
-
-[Как получить Personal Access Token](https://docs.docker.com/docker-hub/access-tokens/)
-
-### 2. Запуск реестра
+### 2. Проверить состояние
 
 ```bash
-docker-compose up -d
+docker compose ps
 ```
 
-Реестр будет доступен по адресу: **`http://localhost:5000`**
-
-### 3. Проверка статуса
+### 3. Проверить доступность реестров
 
 ```bash
-# Проверить, что контейнер запущен
-docker ps | grep local-registry
-
-# Проверить здоровье реестра
 curl http://localhost:5000/v2/
+curl http://localhost:5001/v2/
+curl http://localhost:5002/v2/
 ```
 
-Успешный ответ:
+Ожидаемый ответ для каждого сервиса:
+
 ```json
 {}
 ```
 
+## Конфигурация
+
+### Основной compose-файл
+
+Файл [docker-compose.yaml](docker-compose.yaml) описывает три сервиса:
+
+- `docker-registry` — прокси к `https://registry-1.docker.io`
+- `quay-registry` — прокси к `https://quay.io`
+- `ghcr-registry` — прокси к `https://ghcr.io`
+
+### Конфигурационные файлы
+
+- [config/docker.yml](https://github.com/vladoz77/docker_repo/blob/master/config/docker.yml) — настройки для Docker Hub proxy
+- [config/quay.yml](https://github.com/vladoz77/docker_repo/blob/master/config/quay.yml) — настройки для Quay proxy
+- [config/ghcr.yml](https://github.com/vladoz77/docker_repo/blob/master/config/ghcr.yml) — настройки для GHCR proxy
+
+Каждый файл задаёт:
+
+- уровень логирования
+- адрес и порт слушания
+- remote URL удалённого реестра
+- путь к файловому хранилищу
+
 ## Использование
 
-### Назначить тег образа для локального реестра
+### Пуш образа в локальный реестр
 
 ```bash
 docker tag my-image:latest localhost:5000/my-image:latest
-```
-
-### Загрузить образ в реестр
-
-```bash
 docker push localhost:5000/my-image:latest
 ```
 
-### Скачать образ из реестра
+Аналогично для других реестров:
+
+```bash
+docker tag my-image:latest localhost:5001/my-image:latest
+docker push localhost:5001/my-image:latest
+```
+
+```bash
+docker tag my-image:latest localhost:5002/my-image:latest
+docker push localhost:5002/my-image:latest
+```
+
+### Pull образа обратно
 
 ```bash
 docker pull localhost:5000/my-image:latest
 ```
 
-### Использование с docker-compose
-
-В других `docker-compose.yaml` файлах указывайте образ с префиксом реестра:
-
-```yaml
-services:
-  app:
-    image: localhost:5000/my-image:latest
-    networks:
-      - local-registry
-    # ...
-
-networks:
-  local-registry:
-    name: local-registry
-    external: true
-```
-
-## Конфигурация
-
-### Файл конфигурации: `config/config.yml`
-
-| Параметр | Описание |
-|----------|---------|
-| `log.level` | Уровень логирования (`debug`, `info`, `warning`, `error`) |
-| `http.addr` | Адрес и порт слушания (`:5000`) |
-| `proxy.remoteurl` | URL официального Docker Registry |
-| `storage.filesystem.rootdirectory` | Путь к хранилищу образов |
-
-### Переменные окружения
-
-| Переменная | Описание |
-|-----------|---------|
-| `DOCKER_USER` | Имя пользователя Docker Hub |
-| `DOCKER_PASSWORD` | Пароль или Personal Access Token |
-
 ## Команды
 
-### Остановить реестр
+### Остановить контейнеры
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
 ### Остановить и удалить данные
 
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
 
-### Просмотр логов
+### Посмотреть логи
 
 ```bash
-docker-compose logs -f registry
+docker compose logs -f docker-registry
+docker compose logs -f quay-registry
+docker compose logs -f ghcr-registry
 ```
 
-### Список загруженных образов
+### Просмотреть список репозиториев
 
 ```bash
 curl http://localhost:5000/v2/_catalog
-```
-
-Ответ:
-```json
-{
-  "repositories": [
-    "my-image",
-    "another-image"
-  ]
-}
-```
-
-### Список тегов образа
-
-```bash
-curl http://localhost:5000/v2/{image_name}/tags/list
-```
-
-Пример:
-```bash
-curl http://localhost:5000/v2/my-image/tags/list
-```
-
-Ответ:
-```json
-{
-  "name": "my-image",
-  "tags": [
-    "latest",
-    "v1.0"
-  ]
-}
+curl http://localhost:5001/v2/_catalog
+curl http://localhost:5002/v2/_catalog
 ```
 
 ## Томы и данные
 
-- **`registry_data`** — томе с данными образов, сохраняется на хосте
+Проект использует отдельные тома для каждого реестра:
 
-Данные реестра сохраняются даже при остановке контейнера. Для полного удаления используйте:
+- `docker_data`
+- `quay_data`
+- `ghcr_data`
 
-```bash
-docker-compose down -v
-```
-
-## Сеть
-
-Реестр работает в изолированной Docker сети `local-registry` с драйвером `bridge`. Это позволяет другим контейнерам обращаться к реестру по имени хоста `registry` или по адресу сети.
+Данные сохраняются на хосте и остаются доступными после перезапуска контейнеров.
 
 ## Безопасность
 
-⚠️ **Важные замечания:**
-
-1. **Не коммитьте `.env` файл** — он содержит учетные данные
-2. Используйте **Personal Access Token** вместо пароля
-3. Реестр доступен локально по HTTP — используйте HTTPS для продакшена
-4. Для продакшена рассмотрите использование аутентификации и SSL/TLS
+- Для локальной разработки проект использует HTTP.
+- Для продакшена стоит включить TLS и защиту доступа.
+- Если Docker на вашей машине не принимает незащищённые реестры, добавьте соответствующие адреса в `insecure-registries`.
 
 ## Решение проблем
 
-### Реестр не доступен
+### Реестр не отвечает
 
 ```bash
-# Проверьте, запущен ли контейнер
-docker ps | grep local-registry
-
-# Если контейнер остановлен, перезапустите
-docker-compose restart registry
+docker compose ps
+docker compose logs <service-name>
 ```
 
-### Ошибка аутентификации
+### Ошибка при работе с незащищённым реестром
 
-1. Проверьте учетные данные в `.env`
-2. Убедитесь, что Personal Access Token имеет права на репозитории
-3. Перезапустите контейнер: `docker-compose restart registry`
+Если Docker отклоняет push/pull к локальному реестру, добавьте в `/etc/docker/daemon.json` записи вида:
 
-### Ошибка при загрузке образа
-
-```bash
-# Убедитесь, что Docker использует незащищенный реестр (только для локальной разработки)
-# В /etc/docker/daemon.json добавьте:
+```json
 {
-  "insecure-registries": ["localhost:5000"]
+  "insecure-registries": ["localhost:5000", "localhost:5001", "localhost:5002"]
 }
-
-# Перезагрузите Docker
-sudo systemctl restart docker
 ```
 
-### Проверить логи реестра
-
-```bash
-docker-compose logs registry
-```
-
-## Ссылки
-
-- [Docker Registry Documentation](https://docs.docker.com/registry/)
-- [Docker Registry Configuration](https://docs.docker.com/registry/configuration/)
-- [Docker Hub API](https://docs.docker.com/docker-hub/api/latest/)
+После этого перезапустите Docker.
