@@ -1,0 +1,3 @@
+server = "https://ghcr.io" 
+[host."http://ghcr-registry:5000"]
+  capabilities = ["pull", "resolve"]
