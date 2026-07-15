@@ -1,0 +1,19 @@
+services:  
+  whoami:
+    image: traefik/whoami:latest
+    container_name: whoami
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`web.home.local`)"
+      - "traefik.http.routers.whoami.entrypoints=websecure"
+      - "traefik.http.routers.whoami.tls=true"
+      - "traefik.http.routers.whoami.tls.certresolver=homelab"
+      - "traefik.http.services.whoami.loadbalancer.server.port=80"
+    networks:
+      proxy:
+        aliases:
+          - whoami.home.local
+networks:
+  proxy:
+    external: true

@@ -1,0 +1,36 @@
+log:
+  level: DEBUG
+api:
+  dashboard: false
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+  metrics:
+    address: ":8082"
+
+providers:
+  docker:
+    exposedByDefault: false   
+
+certificatesResolvers:
+  homelab:
+    acme:
+      caServer: ${TRAEFIK_ACME_SERVER}
+      caCertificates: 
+      - ${TRAEFIK_CACERTIFICATE}
+      storage: /acme/acme.json
+      httpChallenge:
+        entryPoint: web
+
+metrics:
+  prometheus:
+    entrypoint: metrics

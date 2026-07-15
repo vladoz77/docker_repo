@@ -1,8 +1,0 @@
-log:
-  format: json
-  level: INFO
-tls:
-  certificates:
-    - certFile: /certs/local.crt
-      keyFile:  /certs/local.key
-

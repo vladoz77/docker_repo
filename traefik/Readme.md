@@ -1,131 +1,124 @@
 # Traefik Reverse Proxy with Docker Compose
 
-Проект настройки обратного прокси Traefik с использованием Docker Compose и самоподписанных SSL-сертификатов.
+Локальный проект обратного прокси на Traefik с Docker Compose и интеграцией с step-ca.
 
 ## Структура проекта
 
 ```
-├── certs/                 # Директория с SSL-сертификатами
-│   ├── local.crt
-│   └── local.key
-├── config/                # Конфигурационные файлы
-│   └── tls.yaml
-├── docker-compose.yaml    # Docker Compose конфигурация
-└── Readme.md             # Документация
+├── .env                   # Переменные окружения для docker-compose и скрипта
+├── acme/                  # Хранение файла acme.json для ACME resolver
+├── config/                # Сгенерированная статическая конфигурация Traefik
+│   └── traefik.yml
+├── docker-compose.yaml    # Основной compose-файл для Traefik
+├── down.sh                # Скрипт остановки и очистки конфигурации
+├── templates/             # Шаблоны для генерации Traefik конфигурации
+│   └── traefik.yml.tmpl
+├── up.sh                  # Скрипт генерации конфигурации и запуска Traefik
+└── Readme.md              # Документация
 ```
 
 ## Предварительные требования
 
 - Docker
 - Docker Compose
-- OpenSSL (для генерации сертификатов)
+- jq
+- curl
+- step-ca
 
-## Генерация самоподписанных сертификатов
+## Настройка `.env`
+
+Файл `.env` содержит основные переменные:
+
+```ini
+TRAEFIK_VERSION=v3.7.7
+TRAEFIK_ACME_SERVER=https://ca.home.local:9000/acme/acme/directory
+TRAEFIK_CACERTIFICATE=/etc/ssl/homelab/root_ca.crt
+TRAEFIK_DASHBOARD_URL=traefik.home.local
+TRAEFIK_STATIC_IP=192.168.200.254
+
+DOCKER_CONTAINER_NAME=traefik
+DOCKER_NETWORK=proxy
+DOCKER_SUBNET=192.168.200.0/24
+DOCKER_GATEWAY=192.168.200.1
+
+ROOT_CA_DIR=/tmp/root_ca.crt
+```
+
+- `TRAEFIK_ACME_SERVER` — адрес ACME сервера step-ca.
+- `TRAEFIK_CACERTIFICATE` — путь к корневому сертификату внутри контейнера.
+- `ROOT_CA_DIR` — путь к локальному корневому сертификату на хосте.
+- `DOCKER_NETWORK`/`DOCKER_SUBNET`/`DOCKER_GATEWAY` — создаваемая внешняя сеть.
+
+## Что делает `up.sh`
+
+Скрипт `up.sh`:
+
+- проверяет наличие файла `.env`
+- загружает переменные окружения
+- тестирует доступность `step-ca` по `https://localhost:9000/health`
+- проверяет наличие корневого сертификата `ROOT_CA_DIR`
+- генерирует `./config/traefik.yml` из шаблона `./templates/traefik.yml.tmpl`
+- создаёт `./acme/acme.json`, если нужно
+- создаёт Docker-сеть, если её нет
+- стартует Traefik через `docker compose up -d`
+
+## Docker Compose
+
+`docker-compose.yaml` создаёт сервис Traefik:
+
+- пробрасывает порты 80, 443, 8082
+- монтирует `/var/run/docker.sock`
+- монтирует `./acme` и `./config`
+- подключается к внешней сети `traefik-net` (имя из переменной `DOCKER_NETWORK`)
+- включает Docker labels для dashboard
+
+## Статическая конфигурация Traefik
+
+`templates/traefik.yml.tmpl` описывает статическую конфигурацию:
+
+- `entryPoints` для `web`, `websecure` и `metrics`
+- `providers.docker`
+- `certificatesResolvers.homelab` с ACME и `caCertificates`
+
+После запуска `up.sh` файл становится доступен в `config/traefik.yml`.
+
+## ACME и сертификаты
+
+- `acme.json` хранится в каталоге `./acme`
+- `traefik.yml.tmpl` использует `TRAEFIK_ACME_SERVER` и `TRAEFIK_CACERTIFICATE`
+- корневой сертификат монтируется в контейнер из `ROOT_CA_DIR`
+
+## Панель управления Traefik
+
+Dashboard доступен по адресу:
+
+```text
+https://dashboard.home.local
+```
+
+> Убедитесь, что `dashboard.home.local` резолвится в `192.168.200.254` или другой IP-адрес внутри вашей сети.
+
+## Запуск и остановка
 
 ```bash
-mkdir -p certs
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout certs/local.key -out certs/local.crt \
-  -subj "/CN=*.home.local"
+./up.sh
+./down.sh
 ```
 
-## Запуск проекта
-
-1. Клонируйте или создайте структуру проекта
-2. Сгенерируйте SSL-сертификаты (см. выше)
-3. Запустите контейнеры:
+Если вы хотите запустить напрямую через Docker Compose:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
-## Конфигурация
+Для остановки:
 
-### Traefik сервис
-
-- **Порты:**
-  - 80 (HTTP)
-  - 443 (HTTPS)
-  - 8082 (Metrics)
-
-- **Точки входа:**
-  - `web` (HTTP, порт 80)
-  - `websecure` (HTTPS, порт 443)
-  - `metrics` (Prometheus метрики, порт 8082)
-
-### Сети
-
-Создается сеть `proxy` для коммуникации между контейнерами.
-
-### Панель управления
-
-Панель управления Traefik доступна по адресу:
+```bash
+docker compose down
 ```
-https://traefik.home.local
-```
-
-## Конфигурационные файлы
-
-### docker-compose.yaml
-
-Основной файл конфигурации Docker Compose с настройками:
-- Проброс портов
-- Монтирование томов
-- Настройки безопасности
-- Docker labels для автоматической конфигурации
-
-### config/tls.yaml
-
-Конфигурация TLS с указанием путей к сертификатам:
-```yaml
-tls:
-  certificates:
-    - certFile: /certs/local.crt
-      keyFile:  /certs/local.key
-```
-
-## Использование
-
-### Добавление новых сервисов
-
-Для добавления нового сервиса в прокси, добавьте следующие labels в docker-compose.yaml:
-
-```yaml
-labels:
-  - "traefik.enable=true"
-  - "traefik.http.routers.сервис.rule=Host(`сервис.home.local`)"
-  - "traefik.http.routers.сервис.entrypoints=websecure"
-  - "traefik.http.routers.сервис.tls=true"
-```
-
-### Мониторинг
-
-Метрики Prometheus доступны на порту 8082.
-
-## Безопасность
-
-- Используется базовая аутентификация для панели управления
-- Самоподписанные сертификаты для локального использования
-- Ограниченные привилегии контейнера
 
 ## Примечания
 
-- Сертификаты самоподписанные - для продакшн-среды рекомендуется использовать доверенные сертификаты
-- Настройте DNS или hosts файл для домена `home.local`
-- Для внешнего доступа потребуется настройка портов на роутере и использование реальных доменов
-
-## Команды управления
-
-```bash
-# Запуск
-docker-compose up -d
-
-# Остановка
-docker-compose down
-
-# Просмотр логов
-docker-compose logs -f traefik
-
-# Перезагрузка
-docker-compose restart traefik
-```
+- Проект ориентирован на локальную сеть и тестовую среду.
+- В production используйте доверенные сертификаты и надёжную DNS-конфигурацию.
+- `step-ca` должен быть доступен и отвечать на health-запрос перед запуском `up.sh`.
