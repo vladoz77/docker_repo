@@ -6,7 +6,7 @@ services:
     ports:
       - "5000:5000"
     volumes:
-      - ./config/docker.yml:/etc/docker/registry/config.yml:ro
+      - ./config/docker.yml:/etc/distribution/config.yml:ro
       - docker_data:/var/lib/registry
     networks:
       - local-registry
@@ -18,7 +18,7 @@ services:
     ports:
       - "5001:5000"
     volumes:
-      - ./config/quay.yml:/etc/docker/registry/config.yml:ro
+      - ./config/quay.yml:/etc/distribution/config.yml:ro
       - quay_data:/var/lib/registry
     networks:
       - local-registry
@@ -30,10 +30,10 @@ services:
     ports:
       - "5002:5000"
     volumes:
-      - ./config/ghcr.yml:/etc/docker/registry/config.yml:ro
+      - ./config/ghcr.yml:/etc/distribution/config.yml:ro
       - ghcr_data:/var/lib/registry
     networks:
-      - local-regi\stry
+      - local-registry
 
 volumes:
   docker_data:
