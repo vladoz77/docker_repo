@@ -1,7 +1,7 @@
 log:
   level: DEBUG
 api:
-  dashboard: false
+  dashboard: true
 
 entryPoints:
   web:
@@ -19,7 +19,8 @@ entryPoints:
 
 providers:
   docker:
-    exposedByDefault: false   
+    exposedByDefault: false
+    network: ${DOCKER_NETWORK}
 
 certificatesResolvers:
   homelab:

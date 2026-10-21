@@ -6,12 +6,12 @@ services:
     security_opt:
       - no-new-privileges:true
     ports:
-      - "80:80"
-      - "443:443"
+      - "${TRAEFIK_BIND_IP:-0.0.0.0}:80:80"
+      - "${TRAEFIK_BIND_IP:-0.0.0.0}:443:443"
       - "8082:8082"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${ROOT_CA_DIR}:/${TRAEFIK_CACERTIFICATE}:ro
+      - ${ROOT_CA_FILE}:/${TRAEFIK_CACERTIFICATE}:ro
       - ./acme:/acme
       - ./config:/etc/traefik
     # Traefik Dynamic configuration via Docker labels
