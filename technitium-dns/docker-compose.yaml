@@ -1,0 +1,35 @@
+services:
+  technitium:
+    image: technitium/dns-server:${VERSION:-latest}
+    container_name: technitium-dns
+    hostname: technitium-dns
+    restart: unless-stopped
+    environment:
+      DNS_SERVER_ADMIN_PASSWORD: ${DNS_SERVER_ADMIN_PASSWORD:?Set a strong password in .env}
+      DNS_SERVER_DOMAIN: ${DNS_SERVER_DOMAIN:-dns.int.devhomelab.site}
+      DNS_SERVER_FORWARDERS: 1.1.1.1,9.9.9.9
+      DNS_SERVER_FORWARDER_PROTOCOL: Udp
+    ports:
+      - "${TECHNITIUM_BIND_IP:-0.0.0.0}:53:53/udp"
+      - "${TECHNITIUM_BIND_IP:-0.0.0.0}:53:53/tcp"
+      - "127.0.0.1:5380:5380"
+    volumes:
+      - technitium_config:/etc/dns
+    sysctls:
+      - net.ipv4.ip_local_port_range=1024 65535
+    networks:
+      - proxy
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.technitium.loadbalancer.server.port=5380
+      - traefik.http.routers.technitium.rule=Host(`${DNS_SERVER_DOMAIN:-dns.int.devhomelab.site}`)
+      - traefik.http.routers.technitium.entrypoints=websecure
+      - traefik.http.routers.technitium.tls=true
+      - traefik.http.routers.technitium.tls.certresolver=homelab
+
+volumes:
+  technitium_config:
+
+networks:
+  proxy:
+    external: true
