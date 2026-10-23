@@ -1,0 +1,22 @@
+services:
+  step-ca:
+    image: smallstep/step-ca:${STEPCA_VERSION:-latest}
+    restart: unless-stopped
+    container_name: ${DOCKER_CONTAINER_NAME:-step-ca}
+    ports:
+      - "9000"
+    env_file:
+      - .env
+    volumes:
+      - step:/home/step
+    networks:
+      step-ca:
+        ipv4_address: ${DOCKER_CONTAINER_IP}
+volumes:
+  step:
+    name: ${DOCKER_VOLUME_NAME:-step-ca-data}
+networks:
+  step-ca:
+    external: true
+    name: ${DOCKER_NETWORK}
+      
