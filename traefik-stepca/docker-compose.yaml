@@ -1,0 +1,82 @@
+services:
+  step-ca:
+    image: smallstep/step-ca:${STEPCA_VERSION:-latest}
+    container_name: ${STEPCA_CONTAINER_NAME:-step-ca}
+    restart: unless-stopped
+    environment:
+      DOCKER_STEPCA_INIT_NAME: ${STEPCA_NAME}
+      DOCKER_STEPCA_INIT_DNS_NAMES: ${STEPCA_HOST},localhost,step-ca
+      DOCKER_STEPCA_INIT_ACME: "true"
+    volumes:
+      - step:/home/step
+    healthcheck:
+      test: ["CMD", "step", "ca", "health",
+             "--ca-url", "https://localhost:9000",
+             "--root", "/home/step/certs/root_ca.crt"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      proxy:
+        ipv4_address: ${STEPCA_STATIC_IP}
+        aliases:
+          - ${STEPCA_HOST}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${DOCKER_NETWORK:-proxy}"
+      - "traefik.tcp.routers.stepca.rule=HostSNI(`${STEPCA_HOST}`)"
+      - "traefik.tcp.routers.stepca.entrypoints=websecure"
+      - "traefik.tcp.routers.stepca.tls.passthrough=true"
+      - "traefik.tcp.services.stepca.loadbalancer.server.port=9000"
+
+  traefik:
+    image: traefik:${TRAEFIK_VERSION:-latest}
+    container_name: ${TRAEFIK_CONTAINER_NAME:-traefik}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      step-ca:
+        condition: service_healthy
+    ports:
+      - "${TRAEFIK_BIND_IP:-0.0.0.0}:80:80"
+      - "${TRAEFIK_BIND_IP:-0.0.0.0}:443:443"
+      - "127.0.0.1:8082:8082"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./acme:/acme
+      - ./config:/etc/traefik
+      - type: volume
+        source: step
+        target: /etc/ssl/homelab
+        read_only: true
+        volume:
+          subpath: certs
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`dashboard.int.devhomelab.site`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=homelab"
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$9Bf7fi7r$$4SZtA20rXAYDxGWvP8jFM0"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth@docker"
+    networks:
+      proxy:
+        ipv4_address: ${TRAEFIK_STATIC_IP}
+
+volumes:
+  step:
+    name: ${DOCKER_VOLUME_NAME:-step-ca-data}
+
+networks:
+  proxy:
+    name: ${DOCKER_NETWORK:-proxy}
+    external: true
