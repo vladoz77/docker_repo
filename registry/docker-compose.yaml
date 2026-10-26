@@ -2,7 +2,16 @@ services:
   docker-registry:
     image: registry:3
     container_name: docker-registry
+    environment:
+      HTTP_PROXY: ${PROXY_URL:-}
+      HTTPS_PROXY: ${PROXY_URL:-}
+      NO_PROXY: ${NO_PROXY_LIST:-localhost,127.0.0.1}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/v2/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     ports:
       - "5000:5000"
     volumes:
@@ -14,7 +23,16 @@ services:
   quay-registry:
     image: registry:3
     container_name: quay-registry
+    environment:
+      HTTP_PROXY: ${PROXY_URL:-}
+      HTTPS_PROXY: ${PROXY_URL:-}
+      NO_PROXY: ${NO_PROXY_LIST:-localhost,127.0.0.1}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/v2/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     ports:
       - "5001:5000"
     volumes:
@@ -26,7 +44,16 @@ services:
   ghcr-registry:
     image: registry:3
     container_name: ghcr-registry
+    environment:
+      HTTP_PROXY: ${PROXY_URL:-}
+      HTTPS_PROXY: ${PROXY_URL:-}
+      NO_PROXY: ${NO_PROXY_LIST:-localhost,127.0.0.1}
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/v2/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     ports:
       - "5002:5000"
     volumes:
